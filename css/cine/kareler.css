@@ -1,0 +1,536 @@
+/* Deniz6 — "Görev anları": expanding film stills and the lightbox (js/cine/kareler.js).
+ * Only transform (incl. the individual translate / scale properties), opacity and clip-path animate; the CV box is a
+ * one-shot stroke-dashoffset draw on a tiny SVG. No backdrop-filter, no blend modes, no filter animation.
+ * Panel layering: media (0) < shade, gradient (1) < CV overlay, viewfinder brackets (2) < label, caption, pill (3). */
+
+.cc-host {
+  --cc-ease: cubic-bezier(.4, 0, .2, 1);
+  --cc-settle: cubic-bezier(.2, .8, .2, 1);
+  margin-top: var(--space-12);
+}
+
+/* ---------- desktop strip: absolutely placed panels, moved with transform, opened with clip-path ---------- */
+.cc {
+  --o: 0;
+  position: relative;
+  height: clamp(380px, 64vh, 640px);
+  contain: layout paint;
+}
+/* every panel box is as wide as the open panel; a closed one is clipped down to --closedW.
+ * x = i * (closedW + 6px gap) + (i > open ? openW - closedW : 0) */
+.cc .cc-p {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: var(--openW, 640px);
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  -webkit-appearance: none;
+  appearance: none;
+  background: #031726;
+  color: #e8f6fb;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  isolation: isolate;
+  -webkit-tap-highlight-color: transparent;
+  transform: translateX(calc(var(--i, 0) * (var(--closedW, 70px) + 6px) + clamp(0, var(--i, 0) - var(--o, 0), 1) * (var(--openW, 640px) - var(--closedW, 70px))));
+  clip-path: inset(0 calc(var(--openW, 640px) - var(--closedW, 70px)) 0 0 round var(--radius-md));
+  transition: transform .6s var(--cc-ease), clip-path .6s var(--cc-ease);
+  /* viewfinder tuning (core.css) */
+  --vf-in: 14px;
+}
+.cc .cc-p.is-open { clip-path: inset(0 0 0 0 round var(--radius-md)); cursor: zoom-in; }
+.cc .cc-p:focus { outline: none; }
+.cc .cc-p:focus-visible { outline: 2px solid #34e7d4; outline-offset: -2px; }
+
+/* media and the CV overlay share one box: fixed at the open width, centred on the visible window, never resampled */
+.cc .cc-media,
+.cc .cc-ov {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--openW, 640px);
+  height: 100%;
+  translate: calc((var(--closedW, 70px) - var(--openW, 640px)) / 2) 0;
+  scale: 1.06;
+  transition: translate .6s var(--cc-ease), scale .9s var(--cc-settle);
+}
+.cc .cc-media { z-index: 0; overflow: hidden; background: #031726 50% 50% / cover no-repeat; }
+.cc .cc-ov { z-index: 2; pointer-events: none; }
+.cc .cc-p.is-open .cc-media,
+.cc .cc-p.is-open .cc-ov { translate: 0 0; scale: 1; }
+/* core's focus pull animates opacity + `scale` on the img itself; nothing here touches those */
+.cc .cc-media > img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+.cc.is-sizing .cc-p,
+.cc.is-sizing .cc-media,
+.cc.is-sizing .cc-ov { transition: none !important; }
+
+.cc-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: #051525;
+  opacity: .62;
+  pointer-events: none;
+  transition: opacity .6s ease;
+}
+.cc-p.is-open .cc-shade { opacity: 0; }
+@media (hover: hover) and (pointer: fine) {
+  .cc:not(.is-row) .cc-p:not(.is-open):hover .cc-shade { opacity: .44; transition-duration: .25s; }
+}
+.cc-grad {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  height: 58%;
+  background: linear-gradient(180deg, #020c1600 0%, #020c1673 45%, #020c16e0 100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+}
+.cc-p.is-open .cc-grad { opacity: 1; transition: opacity .6s ease .15s; }
+
+/* vertical frame label, centred in the closed width; an amber marker joins it on the open panel */
+.cc-label {
+  position: absolute;
+  bottom: 22px;
+  left: calc(var(--closedW, 70px) / 2);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  writing-mode: vertical-rl;
+  transform: translateX(-50%) rotate(180deg);
+  color: #34e7d4;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: .18em;
+  white-space: nowrap;
+  text-shadow: 0 1px 8px #020c16;
+  pointer-events: none;
+}
+.cc-label::before {
+  content: '';
+  flex: none;
+  width: 2px;
+  height: 18px;
+  background: #ffae4a;
+  opacity: 0;
+  transform: scaleY(.2);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.cc-p.is-open .cc-label::before { opacity: 1; transform: none; transition: opacity .3s ease .2s, transform .5s var(--cc-settle) .2s; }
+
+/* caption: fixed width (no reflow while the panel opens), revealed after the panel has grown */
+.cc-cap {
+  position: absolute;
+  bottom: 0;
+  left: var(--closedW, 70px);
+  z-index: 3;
+  box-sizing: border-box;
+  width: calc(var(--openW, 640px) - var(--closedW, 70px));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0 32px 26px 4px;
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+}
+.cc-p.is-open .cc-cap { opacity: 1; transform: none; transition: opacity .5s ease .3s, transform .7s var(--cc-settle) .3s; }
+.cc-cap-t {
+  max-width: 34ch;
+  color: #e8f6fb;
+  font-family: var(--font-body);
+  font-size: clamp(16px, 1.6vw, 21px);
+  font-weight: 600;
+  line-height: 1.3;
+  text-wrap: balance;
+  text-shadow: 0 1px 12px #020c16;
+}
+.cc-cap-m {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #93b4c7;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: .12em;
+  font-variant-numeric: tabular-nums;
+}
+.cc-cap-m::before { content: ''; flex: none; width: 6px; height: 6px; border-radius: 50%; background: #ffae4a; }
+
+/* static "enlarge" pill on the open panel (hover / keyboard focus) */
+.cc-zoom {
+  position: absolute;
+  top: 42px;
+  right: 42px;
+  z-index: 3;
+  padding: 7px 12px;
+  border-radius: var(--radius-full);
+  background: #020c16cc;
+  box-shadow: inset 0 0 0 1px #34e7d466;
+  color: #e8f6fb;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: .16em;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+}
+.cc-p.is-open:hover .cc-zoom,
+.cc-p.is-open:focus-visible .cc-zoom { opacity: 1; transform: none; }
+
+/* ---------- CV lock-on (panels and lightbox) ---------- */
+.cc-cv,
+.cine-lb__cv {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.cc-cv-box {
+  fill: none;
+  stroke: #34e7d4;
+  stroke-linejoin: miter;
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 1;
+}
+/* the transition lives on the "on" state only: un-drawing is instant */
+.cc-p.is-open.is-locked .cc-cv-box,
+.cine-lb__frame.is-locked .cc-cv-box { stroke-dashoffset: 0; transition: stroke-dashoffset .7s cubic-bezier(.65, 0, .35, 1) .35s; }
+.cc-chip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  padding: 4px 7px;
+  border-radius: 3px;
+  background: #ffae4a;
+  color: #2a1600;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 12px;
+  letter-spacing: .06em;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+}
+.cc-p.is-open.is-locked .cc-chip,
+.cine-lb__frame.is-locked .cine-lb__chip { opacity: 1; transition: opacity .35s ease 1.05s; }
+
+/* ---------- film timeline under the strip ---------- */
+.cc-tl { margin: var(--space-4) -6px 0; padding: 0 6px; overflow: hidden; pointer-events: none; }
+.cc-tl-track { position: relative; height: 16px; }
+.cc-tl-track::before { content: ''; position: absolute; top: 7px; right: 0; left: 0; height: 1px; background: #55819b59; }
+.cc-tl-track i { position: absolute; top: 4px; width: 1px; height: 7px; margin-left: -.5px; background: #55819b; }
+.cc-tl-track b { position: absolute; inset: 0; transform: translateX(0%); transition: transform .6s var(--cc-ease, ease); }
+.cc-tl-track b::before { content: ''; position: absolute; top: 3px; left: -4.5px; width: 9px; height: 9px; border-radius: 50%; background: #ffae4a; box-shadow: 0 0 0 3px #ffae4a2e; }
+
+/* ---------- phones and coarse pointers: a horizontal scroll-snap row ---------- */
+.cc.is-row {
+  display: flex;
+  gap: 12px;
+  height: auto;
+  margin-right: calc(50% - 50vw);
+  margin-left: calc(50% - 50vw);
+  padding: 0 8vw;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 8vw;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.cc.is-row::-webkit-scrollbar { display: none; }
+.cc.is-row .cc-p {
+  position: relative;
+  flex: 0 0 84vw;
+  width: 84vw;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  transform: none;
+  clip-path: none;
+  transition: none;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  cursor: pointer;
+  /* viewfinder (core.css; phones use --vf-in-m / --vf-l-m): kept clear of the label pill */
+  --vf-in: 10px;
+  --vf-l: 18px;
+}
+.cc.is-row .cc-media,
+.cc.is-row .cc-ov { width: 100%; translate: none; scale: 1.04; transition: scale .9s var(--cc-settle); }
+.cc.is-row .cc-p.is-open .cc-media,
+.cc.is-row .cc-p.is-open .cc-ov { translate: none; scale: 1; }
+.cc.is-row .cc-shade { opacity: .4; }
+.cc.is-row .cc-p.is-open .cc-shade { opacity: 0; }
+.cc.is-row .cc-grad { opacity: 1; }
+.cc.is-row .cc-label {
+  top: 18px;
+  bottom: auto;
+  left: 18px;
+  gap: 7px;
+  padding: 6px 9px;
+  border-radius: var(--radius-full);
+  background: #020c16b3;
+  writing-mode: horizontal-tb;
+  transform: none;
+  font-size: 10px;
+  text-shadow: none;
+}
+.cc.is-row .cc-label::before { width: 6px; height: 6px; border-radius: 50%; transform: none; }
+.cc.is-row .cc-cap { left: 0; width: 100%; gap: 6px; padding: 0 16px 14px; opacity: 1; transform: none; }
+.cc.is-row .cc-cap-t { font-size: 15px; }
+.cc.is-row .cc-cap-m { font-size: 10px; }
+.cc.is-row .cc-zoom { display: none; }
+
+/* ---------- lightbox ---------- */
+.cine-lb {
+  --lbw: min(92vw, calc((100vh - 230px) * 16 / 9));
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: transparent;
+  color: #e8f6fb;
+  opacity: 0;
+  transition: opacity .25s ease;
+  transition: opacity .25s ease, overlay .25s ease allow-discrete, display .25s ease allow-discrete;
+}
+@supports (height: 100svh) {
+  .cine-lb { --lbw: min(92vw, calc((100svh - 230px) * 16 / 9)); }
+}
+.cine-lb[open] { opacity: 1; }
+@starting-style {
+  .cine-lb[open] { opacity: 0; }
+}
+.cine-lb::backdrop {
+  background: rgb(5 21 37 / .94);
+  opacity: 0;
+  transition: opacity .25s ease;
+  transition: opacity .25s ease, overlay .25s ease allow-discrete, display .25s ease allow-discrete;
+}
+.cine-lb[open]::backdrop { opacity: 1; }
+@starting-style {
+  .cine-lb[open]::backdrop { opacity: 0; }
+}
+/* a view transition (or reduced motion) replaces the CSS fade */
+.cine-lb.is-vt,
+.cine-lb.is-vt::backdrop,
+.cine-lb.is-still,
+.cine-lb.is-still::backdrop { transition: none; }
+
+.cine-lb__inner {
+  position: relative;
+  box-sizing: border-box;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 68px 16px 20px;
+  touch-action: pinch-zoom;
+}
+.cine-lb__fig { display: flex; flex-direction: column; gap: 14px; width: var(--lbw); margin: 0; }
+.cine-lb__frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #020c16;
+  box-shadow: 0 0 0 1px #1e4560, 0 40px 120px -40px #000;
+}
+.cine-lb__pic { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; }
+.cine-lb__img,
+.cine-lb__hi {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+.cine-lb__hi { opacity: 0; }
+.cine-lb__hi.is-on { opacity: 1; transition: opacity .6s ease; }
+
+.cine-lb__cap { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; min-height: 44px; }
+.cine-lb__txt { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cine-lb__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #34e7d4;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: .12em;
+  font-variant-numeric: tabular-nums;
+}
+.cine-lb__meta::before { content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%; background: #ffae4a; box-shadow: 0 0 8px #ffae4a99; }
+.cine-lb__text { color: #e8f6fb; font-family: var(--font-body); font-size: 17px; font-weight: 600; line-height: 1.35; text-wrap: balance; }
+.cine-lb__count {
+  flex: none;
+  color: #93b4c7;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: .12em;
+  font-variant-numeric: tabular-nums;
+}
+.cine-lb__nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: var(--lbw); }
+.cine-lb__hint { color: #93b4c7; font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: .18em; white-space: nowrap; }
+
+.cine-lb__btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #0b2135e6;
+  box-shadow: inset 0 0 0 1px #1e4560;
+  color: #e8f6fb;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .2s ease, box-shadow .2s ease;
+}
+.cine-lb__btn svg { width: 22px; height: 22px; }
+.cine-lb__btn:hover { color: #34e7d4; box-shadow: inset 0 0 0 1px #34e7d4; }
+.cine-lb__btn:focus { outline: none; }
+.cine-lb__btn:focus-visible { box-shadow: 0 0 0 2px #051525, 0 0 0 4px #34e7d4; }
+.cine-lb__btn[hidden] { display: none; }
+.cine-lb__close { position: absolute; top: 12px; right: 12px; z-index: 3; }
+
+@media (hover: none), (pointer: coarse) {
+  .cine-lb__hint { visibility: hidden; }
+}
+/* wide screens and short landscape phones: arrows at the sides, the frame takes the rest */
+@media (min-width: 900px), (max-height: 520px) and (orientation: landscape) {
+  .cine-lb__nav { justify-content: center; }
+  .cine-lb__prev,
+  .cine-lb__next { position: absolute; top: 50%; z-index: 3; width: 52px; height: 52px; margin-top: -26px; }
+  .cine-lb__prev { left: 20px; }
+  .cine-lb__next { right: 20px; }
+}
+@media (min-width: 900px) {
+  .cine-lb { --lbw: min(calc(100vw - 184px), 1600px, calc((100vh - 176px) * 16 / 9)); }
+  @supports (height: 100svh) {
+    .cine-lb { --lbw: min(calc(100vw - 184px), 1600px, calc((100svh - 176px) * 16 / 9)); }
+  }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  .cine-lb { --lbw: min(calc(100vw - 160px), calc((100vh - 96px) * 16 / 9)); }
+  @supports (height: 100svh) {
+    .cine-lb { --lbw: min(calc(100vw - 160px), calc((100svh - 96px) * 16 / 9)); }
+  }
+  .cine-lb__inner { gap: 8px; padding: 10px 80px; }
+  .cine-lb__fig { gap: 8px; }
+  .cine-lb__cap { min-height: 0; }
+  .cine-lb__text { font-size: 14px; }
+  .cine-lb__hint { display: none; }
+  .cine-lb__close { top: 8px; right: 8px; width: 44px; height: 44px; }
+  .cine-lb__prev { left: 14px; }
+  .cine-lb__next { right: 14px; }
+}
+@media (max-width: 560px) {
+  .cine-lb__text { font-size: 15px; }
+  .cine-lb__meta { font-size: 10px; letter-spacing: .1em; }
+}
+
+/* ---------- shared-element view transition ('kare') ---------- */
+html.cine-vt::view-transition-group(kare) { animation-duration: .55s; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+html.cine-vt::view-transition-old(kare),
+html.cine-vt::view-transition-new(kare) { height: 100%; object-fit: cover; overflow: clip; }
+html.cine-vt::view-transition-old(root),
+html.cine-vt::view-transition-new(root) { animation-duration: .35s; }
+/* prev / next: a 6% sideways crossfade inside the frame */
+html.cine-vt[data-dir]::view-transition-group(kare) { animation-duration: .45s; }
+html.cine-vt[data-dir]::view-transition-image-pair(kare) { overflow: clip; border-radius: 10px; }
+html.cine-vt[data-dir="next"]::view-transition-old(kare) { animation: cine-kare-out-l .45s cubic-bezier(.4, 0, .2, 1) both; }
+html.cine-vt[data-dir="next"]::view-transition-new(kare) { animation: cine-kare-in-r .45s cubic-bezier(.2, .8, .2, 1) both; }
+html.cine-vt[data-dir="prev"]::view-transition-old(kare) { animation: cine-kare-out-r .45s cubic-bezier(.4, 0, .2, 1) both; }
+html.cine-vt[data-dir="prev"]::view-transition-new(kare) { animation: cine-kare-in-l .45s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes cine-kare-out-l { to { opacity: 0; transform: translateX(-6%); } }
+@keyframes cine-kare-in-r { from { opacity: 0; transform: translateX(6%); } }
+@keyframes cine-kare-out-r { to { opacity: 0; transform: translateX(6%); } }
+@keyframes cine-kare-in-l { from { opacity: 0; transform: translateX(-6%); } }
+
+/* ---------- reduced motion (JS sets .is-still from the media query): instant swaps ---------- */
+.cc-host.is-still .cc-p,
+.cc-host.is-still .cc-media,
+.cc-host.is-still .cc-ov,
+.cc-host.is-still .cc-shade,
+.cc-host.is-still .cc-grad,
+.cc-host.is-still .cc-cap,
+.cc-host.is-still .cc-label::before,
+.cc-host.is-still .cc-zoom,
+.cc-host.is-still .cc-chip,
+.cc-host.is-still .cc-cv-box,
+.cc-host.is-still .cc-tl-track b,
+.cine-lb.is-still .cine-lb__hi,
+.cine-lb.is-still .cc-chip,
+.cine-lb.is-still .cc-cv-box { transition: none !important; }
+.cc-host.is-still .cc-media,
+.cc-host.is-still .cc-ov { scale: none !important; }
+
+/* ---------- forced colours and print ---------- */
+@media (forced-colors: active) {
+  .cc .cc-p:focus-visible { outline-color: Highlight; }
+  .cc-chip { forced-color-adjust: none; }
+}
+@media print {
+  .cine-lb { display: none !important; }
+  .cc-shade, .cc-zoom, .cc-tl { display: none; }
+  .cc { height: 320px; }
+}

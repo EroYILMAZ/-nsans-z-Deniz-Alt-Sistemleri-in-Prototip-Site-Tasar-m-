@@ -1,0 +1,79 @@
+/* Deniz6 tasarım token'ları — tokens.json'dan üretildi. */
+
+:root, [data-theme="derin"] {
+  color-scheme: dark;
+  --surface: #051525;
+  --surface-raised: #0b2135;
+  --surface-sunken: #020c16;
+  --line: #1e4560;
+  --line-strong: #55819b;
+  --ink: #e8f6fb;
+  --ink-muted: #93b4c7;
+  --biolume: #34e7d4;
+  --biolume-soft: #0d3b40;
+  --on-biolume: #03201d;
+  --signal: #ffae4a;
+  --signal-soft: #3a2509;
+  --on-signal: #2a1600;
+  --success: #6fe39a;
+  --success-soft: #0d3320;
+  --danger: #ff8a80;
+  --danger-soft: #3d1414;
+  --sea-shallow: #0a4862;
+  --sea-mid: #0a3a5a;
+  --caustic: #bdf3ff;
+  --link: var(--biolume);
+  --shadow-sm: 0 1px 2px #00000066, 0 2px 8px #0000004d;
+  --shadow-lg: 0 24px 48px -16px #000000b3;
+  --glow-biolume: 0 0 0 1px #34e7d466, 0 8px 32px -4px #34e7d466;
+  --focus-ring: 0 0 0 2px #051525, 0 0 0 4px #34e7d4;
+}
+
+[data-theme="yuzey"] {
+  color-scheme: light;
+  --surface: #f3f8fa;
+  --surface-raised: #ffffff;
+  --surface-sunken: #e2edf2;
+  --line: #c6dbe5;
+  --line-strong: #647f8e;
+  --ink: #072033;
+  --ink-muted: #3f5867;
+  --biolume: #006a60;
+  --biolume-soft: #d3f3ee;
+  --on-biolume: #ffffff;
+  --signal: #a14700;
+  --signal-soft: #ffe8cf;
+  --on-signal: #ffffff;
+  --success: #1d7540;
+  --success-soft: #dcf3e4;
+  --danger: #b3261e;
+  --danger-soft: #fde3e1;
+  --sea-shallow: #b4e1ee;
+  --sea-mid: #dcf0f6;
+  --caustic: #ffffff;
+  --link: var(--biolume);
+  --shadow-sm: 0 1px 2px #07203314, 0 2px 8px #0720331a;
+  --shadow-lg: 0 24px 48px -16px #07203340;
+  --glow-biolume: 0 0 0 1px #006a604d, 0 8px 24px -6px #006a6066;
+  --focus-ring: 0 0 0 2px #f3f8fa, 0 0 0 4px #006a60;
+}
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 24px;
+  --radius-full: 9999px;
+  --blur-glass: 14px;
+  --font-display: Unbounded, "Arial Black", system-ui, sans-serif;
+  --font-body: Manrope, "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}

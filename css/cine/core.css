@@ -1,0 +1,225 @@
+/* Deniz6 — sinema katmanının ortak görünümü: film greni, vizör çerçevesi, odak çekme, vinyet ve küçük cilalar.
+ * Only opacity, transform (including the individual `scale` property) and clip-path ever animate.
+ * Layering inside a cinematic frame: image (auto) < .cine-vignette (1) < viewfinder brackets (2) < .vf-cap (3). */
+
+:root { --cine-grain: .045; }
+
+/* ---------- film grain: one static, viewport-sized layer, rasterised once ---------- */
+/* z-index 45: above the depth gauge (40), below the nav (50), fx buttons (80+), the dive preloader and dialogs (top layer). */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 100vh;
+  height: 100lvh;
+  z-index: 45;
+  pointer-events: none;
+  opacity: var(--cine-grain);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 160px 160px repeat;
+}
+@media print, (forced-colors: active), (prefers-contrast: more) {
+  body::after { display: none; }
+}
+
+/* ---------- viewfinder lock-on: [data-vf] + .is-locked ---------- */
+/* Hosts may tune it with --vf-c (colour), --vf-l / --vf-l-m (arm length, desktop / mobile),
+ * --vf-w (stroke), --vf-in / --vf-in-m (inset). The host's own ::before / ::after are taken;
+ * put a vignette on an inner .cine-vignette element instead. */
+:where([data-vf]) { position: relative; }
+[data-vf]::before,
+[data-vf]::after {
+  --vfc: var(--vf-c, #34e7d4);
+  content: '';
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+}
+/* four L-brackets, no extra DOM: 8 one-colour gradient layers */
+[data-vf]::after {
+  --vfl: var(--vf-l, 22px);
+  --vfw: var(--vf-w, 1.5px);
+  inset: var(--vf-in, 12px);
+  background:
+    linear-gradient(var(--vfc) 0 0) 0 0 / var(--vfl) var(--vfw),
+    linear-gradient(var(--vfc) 0 0) 0 0 / var(--vfw) var(--vfl),
+    linear-gradient(var(--vfc) 0 0) 100% 0 / var(--vfl) var(--vfw),
+    linear-gradient(var(--vfc) 0 0) 100% 0 / var(--vfw) var(--vfl),
+    linear-gradient(var(--vfc) 0 0) 0 100% / var(--vfl) var(--vfw),
+    linear-gradient(var(--vfc) 0 0) 0 100% / var(--vfw) var(--vfl),
+    linear-gradient(var(--vfc) 0 0) 100% 100% / var(--vfl) var(--vfw),
+    linear-gradient(var(--vfc) 0 0) 100% 100% / var(--vfw) var(--vfl);
+  background-repeat: no-repeat;
+  opacity: 0;
+  transform: scale(1.07);
+  transition: opacity .3s var(--dz-ease, ease), transform .55s cubic-bezier(.34, 1.56, .64, 1);
+}
+[data-vf].is-locked::after { opacity: 1; transform: none; }
+/* 14px centre crosshair: blinks twice on lock, then stays hidden */
+[data-vf]::before {
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  background:
+    linear-gradient(var(--vfc) 0 0) 50% 50% / 100% 1.5px no-repeat,
+    linear-gradient(var(--vfc) 0 0) 50% 50% / 1.5px 100% no-repeat;
+  opacity: 0;
+}
+[data-vf].is-locked::before { animation: cine-vf-blink .32s steps(1, end) .12s 2; }
+@keyframes cine-vf-blink {
+  0% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* optional mono caption, e.g. 'KAM-01 · 1920×1080 · <i class="vf-rec"></i> KAYIT'.
+ * It types in when it, or any ancestor, gets .is-locked. Position defaults are zero-specificity. */
+:where(.vf-cap) {
+  position: absolute;
+  left: calc(var(--vf-in, 12px) + 12px);
+  bottom: calc(var(--vf-in, 12px) + 10px);
+  z-index: 3;
+  /* nowrap text: on a 360px phone a long caption must stay inside its frame (and never widen a dialog) */
+  max-width: calc(100% - 2 * (var(--vf-in, 12px) + 12px));
+  overflow-x: clip;
+}
+.vf-cap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #e8f6fb;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: .14em;
+  white-space: nowrap;
+  text-shadow: 0 1px 8px #000000b3;
+  pointer-events: none;
+  clip-path: inset(0 100% 0 0);
+}
+.is-locked .vf-cap,
+.vf-cap.is-locked { animation: cine-vf-type .7s steps(28, end) .25s both; }
+@keyframes cine-vf-type {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+/* REC dot: an empty element draws the dot, a text '●' is just coloured */
+.vf-rec { color: #ffae4a; font-style: normal; }
+.vf-rec:empty {
+  display: inline-block;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffae4a;
+  box-shadow: 0 0 8px #ffae4a99;
+}
+.is-locked .vf-rec,
+.vf-cap.is-locked .vf-rec { animation: cine-vf-rec 1s steps(1, end) .95s 3; }
+@keyframes cine-vf-rec {
+  0% { opacity: 1; }
+  50%, 100% { opacity: .15; }
+}
+
+@media (max-width: 760px) {
+  [data-vf]::after {
+    --vfl: var(--vf-l-m, 16px);
+    inset: var(--vf-in-m, 8px);
+  }
+  :where(.vf-cap) {
+    left: calc(var(--vf-in-m, 8px) + 10px);
+    bottom: calc(var(--vf-in-m, 8px) + 8px);
+    max-width: calc(100% - 2 * (var(--vf-in-m, 8px) + 10px));
+  }
+  .vf-cap { gap: 6px; font-size: 10px; letter-spacing: .12em; }
+}
+
+/* ---------- lens focus pull: .fp wrapper > img, .is-sharp (driven by D6Cine.focusPull) ---------- */
+/* The wrapper's background is the tiny blurred still from its data-lq attribute (set inline by core.js).
+ * The pull is an animation of opacity + the individual `scale` property, so it never fights a module's
+ * own `transform` or `transition` on the same img (e.g. a scroll-driven scale). */
+:where(.fp) {
+  position: relative;
+  overflow: hidden;
+  background-color: #020c16;
+}
+.fp[data-lq] {
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: var(--fp-pos, 50% 50%);
+}
+.fp > img:not(.is-sharp) { opacity: 0; }
+.fp > img.is-sharp { animation: cine-fp-pull .9s var(--dz-ease-out, cubic-bezier(.16, 1, .3, 1)); }
+/* only a "from" keyframe: it settles on whatever opacity / scale the module gives the img */
+@keyframes cine-fp-pull {
+  from { opacity: 0; scale: 1.03; }
+}
+@keyframes cine-fp-fade {
+  from { opacity: 0; }
+}
+
+/* ---------- static vignette overlay ---------- */
+/* An element (usually a span) inside a positioned frame. Tune with --vig-in (clear centre) and --vig-a (edge darkness). */
+.cine-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 50%, transparent var(--vig-in, 55%), rgba(2, 8, 16, var(--vig-a, .55)) 100%);
+}
+
+/* ---------- polish ---------- */
+html { scrollbar-gutter: stable; }
+html:has(dialog[open]) { overflow: hidden; }
+.dz-sh-title, h2 { text-wrap: balance; }
+.dz-sh-lead, .prose p, .cta p { text-wrap: pretty; }
+/* The plain blocks below the cinematic sections skip layout and paint while far away (marquee and
+ * countdown included). Never put this on a sticky / pinned section or on one of its ancestors.
+ * `auto` remembers the real height after the first render; the lengths are only first estimates. */
+#takim, #yol, #sponsor {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}
+#takim { contain-intrinsic-size: auto 1050px; }
+#yol { contain-intrinsic-size: auto 1000px; }
+#sponsor { contain-intrinsic-size: auto 620px; }
+@media (max-width: 900px) {
+  #takim { contain-intrinsic-size: auto 1400px; }
+  #sponsor { contain-intrinsic-size: auto 680px; }
+}
+@media (max-width: 560px) {
+  #takim { contain-intrinsic-size: auto 2250px; }
+  #yol { contain-intrinsic-size: auto 1150px; }
+  #sponsor { contain-intrinsic-size: auto 760px; }
+}
+
+/* ---------- reduced motion: everything lands in its final state without movement ---------- */
+@media (prefers-reduced-motion: reduce) {
+  [data-vf]::after { transform: none; transition: none; }
+  [data-vf].is-locked::before { animation: none; }
+  .vf-cap { clip-path: none; opacity: 0; }
+  .is-locked .vf-cap,
+  .vf-cap.is-locked { animation: none; opacity: 1; }
+  .is-locked .vf-rec,
+  .vf-cap.is-locked .vf-rec { animation: none; }
+  .fp > img.is-sharp { animation: cine-fp-fade .35s ease-out; }
+}
+
+/* ---------- forced colours and print ---------- */
+@media (forced-colors: active) {
+  [data-vf]::before, [data-vf]::after, .cine-vignette { display: none; }
+  .vf-cap,
+  .is-locked .vf-cap,
+  .vf-cap.is-locked { clip-path: none; animation: none; }
+}
+@media print {
+  [data-vf]::before, .cine-vignette { display: none; }
+  [data-vf]::after { transition: none; }
+  .vf-cap { clip-path: none !important; animation: none !important; }
+  .fp > img { opacity: 1 !important; animation: none !important; }
+  #takim, #yol, #sponsor { content-visibility: visible; }
+}

@@ -1,0 +1,280 @@
+/* Deniz6 — "Sinema Penceresi" (js/cine/window.js).
+ * The #film section is a pinned stage. core.js writes --p (0..1) on the section and everything here derives from it:
+ *   --o  opens the porthole (fully open at p = .6),
+ *   --k  darkens the stage into a cinema and lifts it again at the very end of the pin, so the section hands over
+ *        to the page without a black edge.
+ * Per frame only transform, opacity and one inset() clip-path change: no filters, blend modes or backdrop filters.
+ * Geometry is expressed in container units of the sticky stage, so nothing is measured in JS. */
+
+/* ---------- section + stage ---------- */
+.cine-win {
+  --p: 0;
+  --o: clamp(0, var(--p) / .6, 1);
+  --k: calc(clamp(0, (var(--o) - .25) / .6, 1) * (1 - clamp(0, (var(--p) - .86) / .14, 1)));
+  --cw-bg: #04111f; /* the depth gradient's colour at this point of the page */
+  --cw-c: #34e7d4;
+  position: relative;
+  height: 220vh;
+  background: var(--cw-bg);
+}
+.cine-win__stage {
+  --cw-top: 60px;                 /* the sticky nav; the box is centred in the space below it */
+  --cw-ix: 33; --cw-iy: 30;       /* porthole inset when closed, % of the box */
+  --cw-r: 28px;                   /* porthole corner radius when closed */
+  --cw-l: 22px; --cw-bo: 10px;    /* bracket arm length, bracket offset outside the porthole */
+  --cw-gap: clamp(20px, 2.2vw, 36px);
+  --cw-sw: 100cqw; --cw-sh: 100cqh;
+  --cw-w: min(var(--cw-sw), (var(--cw-sh) - var(--cw-top)) * 16 / 9);
+  --cw-h: min(var(--cw-sw) * 9 / 16, var(--cw-sh) - var(--cw-top));
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  /* vh is the large viewport on phones: while scrolling down the URL bar is collapsed and the stage fills it */
+  height: 100vh;
+  display: grid; /* one implicit cell the size of the stage; only the box is in flow */
+  overflow: hidden;
+  overflow: clip;
+  container-type: size;
+  contain: layout paint;
+  isolation: isolate;
+}
+@supports not (width: 1cqw) {
+  .cine-win__stage { --cw-sw: 100vw; --cw-sh: 100vh; }
+}
+
+/* ---------- darkness + ambient light ---------- */
+.cine-win__dark { position: absolute; inset: 0; z-index: 0; background: #000; opacity: var(--k); pointer-events: none; will-change: opacity; }
+.cine-win__amb { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; contain: strict; }
+/* two static soft-spill vignettes cross-fade so the stage edge always matches what is around it:
+   the page colour while the window is closed, black while the cinema is dark */
+.cine-win__amb::before, .cine-win__amb::after { content: ''; position: absolute; inset: 0; z-index: 1; will-change: opacity; }
+.cine-win__amb::before { background: radial-gradient(closest-side, transparent 35%, var(--cw-bg) 100%); opacity: calc(1 - var(--k)); }
+.cine-win__amb::after { background: radial-gradient(closest-side, transparent 35%, #000 100%); opacity: var(--k); }
+/* a 32×18 image stretched over the stage: the browser's upscale is the blur */
+.cine-win__amb-still { position: absolute; inset: 0; display: block; width: 100%; height: 100%; opacity: .55; transition: opacity .6s linear; }
+/* host of the player's two canvas.film-amb (their crossfade lives in the film-player block of sections.css);
+   the light's strength is this host's opacity, never the canvases' */
+.cine-win__amb-cv { position: absolute; inset: 0; opacity: 0; transition: opacity .6s linear; }
+.cine-win.is-live.has-amb .cine-win__amb-still { opacity: 0; }
+.cine-win.is-live.has-amb .cine-win__amb-cv { opacity: .45; }
+.cine-win.is-live:not(.has-amb) .cine-win__amb-still { opacity: .3; }
+
+/* ---------- eyebrow + split title ---------- */
+.cine-win__head { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.cine-win__kick {
+  position: absolute; left: 50%;
+  bottom: calc(var(--cw-sh) / 2 - var(--cw-top) / 2 + var(--cw-h) * (50 - var(--cw-iy)) / 100 + 18px);
+  white-space: nowrap;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, .6);
+  /* rides the porthole's top edge upward while it fades */
+  transform: translate(-50%, calc(var(--o) * var(--cw-h) * var(--cw-iy) / -100));
+  opacity: calc(1 - var(--o) * 2.2);
+  will-change: transform, opacity;
+}
+.cine-win__title { margin: 0; color: var(--ink); font-family: var(--font-display); font-size: clamp(22px, calc(var(--cw-w) * .044), 76px); font-weight: 700; line-height: 1.05; letter-spacing: -.03em; }
+.cine-win__title .l, .cine-win__title .r {
+  position: absolute;
+  top: calc(var(--cw-sh) / 2 + var(--cw-top) / 2);
+  white-space: nowrap;
+  text-shadow: 0 4px 30px rgba(0, 0, 0, .45);
+  opacity: calc(1 - var(--o) * 1.6);
+  will-change: transform, opacity;
+}
+/* each half sits beside the closed porthole and travels with its edge as it opens */
+.cine-win__title .l {
+  right: calc(var(--cw-sw) / 2 + var(--cw-w) * (50 - var(--cw-ix)) / 100 + var(--cw-gap));
+  transform: translate(calc(var(--o) * var(--cw-w) * var(--cw-ix) / -100), -50%);
+}
+.cine-win__title .r {
+  left: calc(var(--cw-sw) / 2 + var(--cw-w) * (50 - var(--cw-ix)) / 100 + var(--cw-gap));
+  color: var(--cw-c);
+  transform: translate(calc(var(--o) * var(--cw-w) * var(--cw-ix) / 100), -50%);
+}
+
+/* ---------- 16:9 box + porthole ---------- */
+.cine-win__box { position: relative; z-index: 2; place-self: center; width: var(--cw-w); height: var(--cw-h); margin-top: var(--cw-top); }
+.cine-win__frame {
+  position: absolute; inset: 0; z-index: 1;
+  -webkit-clip-path: inset(calc((1 - var(--o)) * var(--cw-iy) * 1%) calc((1 - var(--o)) * var(--cw-ix) * 1%) round calc((1 - var(--o)) * var(--cw-r)));
+  clip-path: inset(calc((1 - var(--o)) * var(--cw-iy) * 1%) calc((1 - var(--o)) * var(--cw-ix) * 1%) round calc((1 - var(--o)) * var(--cw-r)));
+}
+.cine-win__lens {
+  position: absolute; inset: 0; z-index: 0;
+  background: #071c28 center / cover no-repeat;
+  transform: scale(calc(1.2 - .2 * var(--o)));
+  will-change: transform;
+  /* nothing to interact with: no image drag ghost on desktop, no long-press image sheet while a thumb scrolls past */
+  pointer-events: none;
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+}
+.cine-win__lens::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(2, 8, 16, .55) 100%); }
+/* focus pull: the individual scale property composes with the lens zoom and is the only thing that transitions */
+.cine-win__still { position: relative; display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0; scale: 1.03; transition: opacity .9s var(--dz-ease-out), scale .9s var(--dz-ease-out); }
+.cine-win__still.is-sharp { opacity: 1; scale: 1; }
+/* cut to black just before the film goes live */
+/* its opacity changes every scroll frame: its own (solid colour, so backing-store free) layer, not a repaint */
+.cine-win__cut { position: absolute; inset: 0; z-index: 1; background: #000; opacity: clamp(0, (var(--o) - .85) / .12, 1); pointer-events: none; will-change: opacity; }
+.cine-win__player { position: absolute; inset: 0; z-index: 2; opacity: 0; pointer-events: none; transition: opacity .35s linear; }
+
+/* the film player inside the window: the box is already 16:9, so the player fills it edge to edge */
+.cine-win .film { height: 100%; margin: 0; }
+.cine-win .film-frame { height: 100%; aspect-ratio: auto; border-radius: 0; box-shadow: none; }
+
+/* ---------- live ---------- */
+.cine-win.is-live .cine-win__frame { -webkit-clip-path: none; clip-path: none; }
+.cine-win.is-live .cine-win__player { opacity: 1; pointer-events: auto; transition-duration: .5s; }
+/* the black stays until the film is opaque above it */
+.cine-win.is-live .cine-win__cut { opacity: 0; transition: opacity .2s linear .55s; }
+.cine-win.is-live .cine-win__lens { visibility: hidden; transition: visibility 0s linear .6s; }
+/* leaving live: one style pass at the open inset, then a short eased return to the scroll-driven values */
+.cine-win.is-unlive-a .cine-win__frame { -webkit-clip-path: inset(0); clip-path: inset(0); }
+.cine-win.is-unlive .cine-win__frame { transition: clip-path .45s var(--dz-ease-out), -webkit-clip-path .45s var(--dz-ease-out); }
+/* the transitions are set on .is-unlive-a too: that is the style pass in which the live overrides drop away */
+.cine-win.is-unlive-a .cine-win__cut, .cine-win.is-unlive .cine-win__cut { transition: opacity .45s linear; }
+.cine-win.no-film .cine-win__cut { display: none; }
+/* the film is unclipped while live, so the viewfinder stays off it, also in the hysteresis band on the way back up
+   (p .52-.58, where the scroll-driven bracket and caption opacity is above 0 again) */
+.cine-win.is-live .cine-win__br, .cine-win.is-live .cine-win__cap { opacity: 0; }
+.cine-win.is-unlive-a .cine-win__br, .cine-win.is-unlive-a .cine-win__cap,
+.cine-win.is-unlive .cine-win__br, .cine-win.is-unlive .cine-win__cap { transition: opacity .45s linear; }
+
+/* ---------- viewfinder: brackets ride the porthole corners, lock on once, fade before the cut ---------- */
+.cine-win__br {
+  position: absolute; z-index: 2;
+  width: var(--cw-l); height: var(--cw-l);
+  pointer-events: none;
+  opacity: calc(1 - (var(--o) - .8) * 6);
+  will-change: transform, opacity;
+}
+.cine-win__br--tl { left: calc(var(--cw-bo) * -1); top: calc(var(--cw-bo) * -1); --cw-dx: -8px; --cw-dy: -8px;
+  transform: translate(calc((1 - var(--o)) * var(--cw-w) * var(--cw-ix) / 100), calc((1 - var(--o)) * var(--cw-h) * var(--cw-iy) / 100)); }
+.cine-win__br--tr { right: calc(var(--cw-bo) * -1); top: calc(var(--cw-bo) * -1); --cw-dx: 8px; --cw-dy: -8px;
+  transform: translate(calc((1 - var(--o)) * var(--cw-w) * var(--cw-ix) / -100), calc((1 - var(--o)) * var(--cw-h) * var(--cw-iy) / 100)); }
+.cine-win__br--bl { left: calc(var(--cw-bo) * -1); bottom: calc(var(--cw-bo) * -1); --cw-dx: -8px; --cw-dy: 8px;
+  transform: translate(calc((1 - var(--o)) * var(--cw-w) * var(--cw-ix) / 100), calc((1 - var(--o)) * var(--cw-h) * var(--cw-iy) / -100)); }
+.cine-win__br--br { right: calc(var(--cw-bo) * -1); bottom: calc(var(--cw-bo) * -1); --cw-dx: 8px; --cw-dy: 8px;
+  transform: translate(calc((1 - var(--o)) * var(--cw-w) * var(--cw-ix) / -100), calc((1 - var(--o)) * var(--cw-h) * var(--cw-iy) / -100)); }
+.cine-win__br i {
+  position: absolute; inset: 0;
+  border: 0 solid var(--cw-c);
+  opacity: 0;
+  translate: var(--cw-dx) var(--cw-dy);
+  transition: opacity .3s linear, translate .55s cubic-bezier(.34, 1.56, .64, 1);
+}
+.cine-win__br--tl i { border-width: 1.5px 0 0 1.5px; }
+.cine-win__br--tr i { border-width: 1.5px 1.5px 0 0; }
+.cine-win__br--bl i { border-width: 0 0 1.5px 1.5px; }
+.cine-win__br--br i { border-width: 0 1.5px 1.5px 0; }
+.cine-win__box.is-locked .cine-win__br i { opacity: 1; translate: 0 0; }
+/* centre crosshair: blinks twice on lock, then is gone */
+.cine-win__box::after {
+  content: ''; position: absolute; left: 50%; top: 50%; z-index: 3;
+  width: 14px; height: 14px; margin: -7px 0 0 -7px;
+  pointer-events: none; opacity: 0;
+  background: linear-gradient(var(--cw-c) 0 0) 50% 0 / 1.5px 100% no-repeat, linear-gradient(var(--cw-c) 0 0) 0 50% / 100% 1.5px no-repeat;
+}
+.cine-win__box.is-locked::after { animation: cw-cross .34s steps(1, end) .12s 2; }
+@keyframes cw-cross { 0% { opacity: 1; } 50%, 100% { opacity: 0; } }
+/* caption under the lower-left bracket, typed in once on lock */
+.cine-win__cap {
+  position: absolute; z-index: 2;
+  left: calc(var(--cw-bo) * -1);
+  top: calc(100% + var(--cw-bo) + 8px);
+  color: #e8f6fb; font-family: var(--font-mono); font-size: 11px; font-weight: 600; line-height: 1; letter-spacing: .12em; white-space: nowrap;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, .7);
+  pointer-events: none;
+  opacity: calc(1 - (var(--o) - .8) * 6);
+  transform: translate(calc((1 - var(--o)) * var(--cw-w) * var(--cw-ix) / 100), calc((1 - var(--o)) * var(--cw-h) * var(--cw-iy) / -100));
+  will-change: transform, opacity;
+}
+.cine-win__cap > span { display: inline-block; -webkit-clip-path: inset(0 100% 0 0); clip-path: inset(0 100% 0 0); }
+.cine-win__box.is-locked .cine-win__cap > span { animation: cw-type .7s steps(28, end) .25s forwards; }
+@keyframes cw-type { to { -webkit-clip-path: inset(0); clip-path: inset(0); } }
+.cine-win__rec { display: inline-block; width: 7px; height: 7px; margin: 0 7px 1px 0; border-radius: 50%; background: #ffae4a; vertical-align: middle; }
+/* a counted blink (like core's .vf-rec), not an endless one: it would keep ticking long after the stage scrolled away */
+.cine-win__box.is-locked .cine-win__rec { animation: dz-blink 1.2s steps(2) 1s 6; }
+.cine-win.is-live .cine-win__rec { animation: none; }
+/* the play button of the hidden (not yet live) player needs no sonar pulse: an endless animation nobody can see */
+.cine-win:not(.is-static):not(.is-live) .film-play-ring::after { animation: none; }
+
+/* ---------- the page steps aside while the window is open ---------- */
+html.cine-win-in .dz-depth.is-fixed { opacity: 0; transform: translate(24px, -50%); pointer-events: none; }
+/* visibility (after the fade) also takes the invisible buttons out of the Tab order and the accessibility tree */
+html.cine-win-in .fx-top, html.cine-win-in .fx-sound { opacity: 0; pointer-events: none; visibility: hidden; transition: opacity .3s linear, visibility 0s linear .3s; }
+
+/* ---------- small screens ---------- */
+@media (max-width: 760px), (orientation: portrait) {
+  .cine-win { height: 160vh; }
+  .cine-win__stage { --cw-l: 16px; --cw-bo: 6px; }
+  .cine-win__cap { font-size: 9.5px; letter-spacing: .1em; }
+}
+/* portrait: the same 16:9 box (full width), a wider porthole, the title above the box; it only fades */
+@media (orientation: portrait) {
+  .cine-win__stage { --cw-ix: 8; --cw-iy: 12; --cw-r: 16px; }
+  .cine-win__head {
+    inset: auto var(--space-4) calc(var(--cw-sh) / 2 - var(--cw-top) / 2 + var(--cw-h) / 2 + 22px);
+    display: flex; flex-direction: column; align-items: center; gap: var(--space-3);
+    text-align: center;
+    opacity: calc(1 - var(--o) * 1.6);
+    will-change: opacity;
+  }
+  .cine-win__kick, .cine-win__title .l, .cine-win__title .r { position: static; transform: none; opacity: 1; will-change: auto; }
+  .cine-win__title { font-size: clamp(22px, calc(var(--cw-sw) * .072), 44px); }
+}
+
+/* ---------- static: reduced motion, low-memory / save-data devices ---------- */
+/* no pin, the final open state, the ordinary player (no autoplay under reduced motion), the still glow only */
+.cine-win.is-static { --o: 1; --k: 0; height: auto; padding: var(--space-24) 0; }
+.cine-win.is-static .cine-win__stage {
+  position: relative; height: auto;
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-8);
+  padding: var(--space-12) var(--space-8);
+  overflow: visible;
+  container-type: normal;
+  contain: none;
+}
+.cine-win.is-static .cine-win__head { position: relative; inset: auto; display: flex; flex-direction: column; align-items: center; gap: var(--space-4); max-width: 100%; text-align: center; opacity: 1; pointer-events: auto; will-change: auto; }
+.cine-win.is-static .cine-win__kick, .cine-win.is-static .cine-win__title .l, .cine-win.is-static .cine-win__title .r { position: static; transform: none; opacity: 1; white-space: normal; will-change: auto; }
+.cine-win.is-static .cine-win__title { font-size: clamp(30px, 3.6vw, 48px); line-height: 1.12; text-wrap: balance; }
+.cine-win.is-static .cine-win__box { width: min(100%, 1100px); height: auto; aspect-ratio: 16 / 9; margin: 0; overflow: hidden; border-radius: var(--radius-lg); box-shadow: 0 0 0 1px var(--line), 0 50px 100px -50px #000; }
+.cine-win.is-static .cine-win__frame { -webkit-clip-path: none; clip-path: none; }
+.cine-win.is-static .cine-win__player { opacity: 1; pointer-events: auto; transition: none; }
+.cine-win.is-static .cine-win__dark { display: none; }
+.cine-win.is-static .cine-win__amb::before, .cine-win.is-static .cine-win__amb::after { will-change: auto; }
+@media (max-width: 900px) {
+  .cine-win.is-static { padding: var(--space-16) 0; }
+  .cine-win.is-static .cine-win__stage { padding: var(--space-8) var(--space-4); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* the window is static under reduced motion (js); these also cover a preference switched on while the page is open */
+  .cine-win__still, .cine-win__player, .cine-win__amb-still, .cine-win__amb-cv, .cine-win__br i,
+  .cine-win__frame, .cine-win__cut, .cine-win__lens, .cine-win__br, .cine-win__cap { transition: none !important; }
+  .cine-win__box::after, .cine-win__cap > span, .cine-win__rec { animation: none !important; }
+  .cine-win__cap > span { -webkit-clip-path: none; clip-path: none; }
+}
+@media print {
+  .cine-win { height: auto !important; background: none; }
+  .cine-win__stage { position: relative !important; height: auto !important; container-type: normal !important; contain: none !important; }
+  .cine-win__dark, .cine-win__amb, .cine-win__br, .cine-win__cap, .cine-win__cut { display: none !important; }
+  .cine-win__head { position: static !important; opacity: 1 !important; }
+  .cine-win__kick, .cine-win__title .l, .cine-win__title .r { position: static !important; transform: none !important; opacity: 1 !important; }
+  .cine-win__frame { -webkit-clip-path: none !important; clip-path: none !important; }
+}
+
+/* ---------- açılış: lumboz yerine ince bir sinema perdesi şeridi (masaüstü) ----------
+   Kare yatayda neredeyse tam genişlikte, dikeyde ince bir şerit olarak başlar ve kaydırdıkça yukarı-aşağı açılır.
+   Başlık şeridin altında tek satır durur, şerit açılırken aşağı kayarak söner. */
+@media (min-width: 761px) {
+  .cine-win:not(.is-static) .cine-win__stage { --cw-ix: 3; --cw-iy: 43; --cw-r: 3px; }
+  .cine-win:not(.is-static) .cine-win__frame { opacity: calc(.45 + var(--o) * .55); }
+  .cine-win:not(.is-static) .cine-win__title .l,
+  .cine-win:not(.is-static) .cine-win__title .r {
+    top: calc(var(--cw-sh) / 2 + var(--cw-top) / 2 + var(--cw-h) * .07 + 22px);
+    font-size: clamp(22px, 2.6vw, 44px);
+    opacity: calc(1 - var(--o) * 2.6);
+  }
+  .cine-win:not(.is-static) .cine-win__title .l { right: 50%; padding-right: .14em; transform: translateY(calc(var(--o) * var(--cw-h) * .43)); }
+  .cine-win:not(.is-static) .cine-win__title .r { left: 50%; padding-left: .14em; transform: translateY(calc(var(--o) * var(--cw-h) * .43)); }
+}
