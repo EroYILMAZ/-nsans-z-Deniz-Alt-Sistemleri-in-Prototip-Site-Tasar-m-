@@ -27,67 +27,77 @@
   // Gerçek zamanlı 3B sahneler (js/auv/, Three.js r160). Büyük sahne, ziyaretçi Araç bölümüne yaklaşınca kurulur.
   var AUV = window.D6AUV || null;
 
-  // Giriş bölümü: D6-AUV'nin kendini çizen teknik çizimi (yalnızca SVG + CSS; WebGL ve JS döngüsü yok).
-  // Çizgiler sırayla çizilir, sonar tarama çizgisi geçer, iticiler döner, DVL ışınları ve fener yanıp söner.
-  var BLUEPRINT = [
-    '<svg class="bp-svg" viewBox="0 0 560 360" xmlns="http://www.w3.org/2000/svg">',
-    '<defs>',
-    '<pattern id="bpGrid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" class="bp-grid"/></pattern>',
-    '<linearGradient id="bpScan" x1="0" x2="1"><stop offset="0" stop-color="#34e7d4" stop-opacity="0"/><stop offset=".85" stop-color="#34e7d4" stop-opacity=".22"/><stop offset="1" stop-color="#bdf3ff" stop-opacity=".9"/></linearGradient>',
-    '<linearGradient id="bpBeam" x1="0" x2="1"><stop offset="0" stop-color="#fff1d6" stop-opacity=".55"/><stop offset="1" stop-color="#fff1d6" stop-opacity="0"/></linearGradient>',
-    '<marker id="bpArrow" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="bp-arrow"/></marker>',
-    '</defs>',
-    '<rect width="560" height="360" fill="url(#bpGrid)" class="bp-gridbox"/>',
-    '<g class="bp-body">',
-    // light cone from the front lamp
-    '<path class="bp-beam" d="M470 244 L560 214 L560 278 Z" fill="url(#bpBeam)"/>',
-    // pressure hull (hidden lines), dome, flanges
-    '<rect class="bp-l bp-hidden" pathLength="1" x="150" y="165" width="270" height="60" rx="8" style="--d:.5s"/>',
-    '<path class="bp-l bp-acc" pathLength="1" d="M420 165 A30 30 0 0 1 420 225" style="--d:.7s"/>',
-    '<path class="bp-l" pathLength="1" d="M150 160 V230 M420 160 V230" style="--d:.8s"/>',
-    // frame plate with pockets
-    '<path class="bp-l bp-main" pathLength="1" d="M120 270 L430 270 Q445 270 452 258 L465 230 L465 140 Q465 120 445 120 L120 120 Q100 120 100 140 L100 250 Q100 270 120 270 Z" style="--d:0s"/>',
-    '<rect class="bp-l" pathLength="1" x="120" y="150" width="68" height="96" rx="12" style="--d:.25s"/>',
-    '<rect class="bp-l" pathLength="1" x="208" y="150" width="114" height="34" rx="10" style="--d:.3s"/>',
-    '<rect class="bp-l" pathLength="1" x="208" y="196" width="114" height="50" rx="10" style="--d:.35s"/>',
-    '<rect class="bp-l" pathLength="1" x="342" y="150" width="68" height="96" rx="12" style="--d:.4s"/>',
-    // buoyancy foam, decal, torpedo tubes, antenna
-    '<rect class="bp-l bp-foam" pathLength="1" x="118" y="92" width="324" height="28" rx="10" style="--d:.9s"/>',
-    '<text class="bp-decal" x="140" y="111">DENİZ6</text>',
-    '<rect class="bp-l" pathLength="1" x="300" y="78" width="84" height="10" rx="5" style="--d:1.1s"/>',
-    '<path class="bp-l" pathLength="1" d="M134 92 V58" style="--d:1.15s"/>',
-    '<circle class="bp-led" cx="134" cy="55" r="3.5"/>',
-    // battery tube, DVL, down camera, gripper, lamp
-    '<rect class="bp-l" pathLength="1" x="172" y="234" width="226" height="24" rx="12" style="--d:1s"/>',
-    '<rect class="bp-l bp-acc" pathLength="1" x="300" y="270" width="36" height="18" rx="4" style="--d:1.2s"/>',
-    '<path class="bp-sonar" d="M308 288 L272 352 M328 288 L364 352"/>',
-    '<rect class="bp-l" pathLength="1" x="380" y="270" width="16" height="14" rx="3" style="--d:1.25s"/>',
-    '<path class="bp-l" pathLength="1" d="M440 270 V282 Q440 292 452 292 L466 292 M466 292 Q474 292 474 284" style="--d:1.3s"/>',
-    '<rect class="bp-l" pathLength="1" x="455" y="238" width="15" height="12" rx="3" style="--d:1.3s"/>',
-    // thrusters: vertical (top corners) and vectored (side, seen as ellipses)
-    '<g class="bp-thr" style="--d:1.35s"><rect class="bp-l" pathLength="1" x="126" y="124" width="48" height="22" rx="6"/><path class="bp-prop" d="M150 124 V146"/></g>',
-    '<g class="bp-thr" style="--d:1.4s"><rect class="bp-l" pathLength="1" x="386" y="124" width="48" height="22" rx="6"/><path class="bp-prop" d="M410 124 V146"/></g>',
-    '<g class="bp-thr" style="--d:1.45s"><ellipse class="bp-l" pathLength="1" cx="86" cy="236" rx="13" ry="24"/><path class="bp-prop bp-prop-h" d="M74 236 H98"/></g>',
-    '<g class="bp-thr" style="--d:1.5s"><ellipse class="bp-l" pathLength="1" cx="480" cy="236" rx="13" ry="24"/><path class="bp-prop bp-prop-h" d="M468 236 H492"/></g>',
-    '</g>',
-    // dimensions
-    '<g class="bp-dim"><path d="M100 306 H465" marker-start="url(#bpArrow)" marker-end="url(#bpArrow)"/><path d="M100 296 V314 M465 296 V314"/><text x="282" y="300" text-anchor="middle">≈ 900 mm</text>',
-    '<path d="M522 58 V290" marker-start="url(#bpArrow)" marker-end="url(#bpArrow)"/><text x="532" y="178" transform="rotate(90 532 178)" text-anchor="middle">≈ 450 mm</text></g>',
-    // callouts
-    '<g class="bp-call" style="--c:2.1s"><path d="M150 124 L118 52 H24"/><circle cx="150" cy="124" r="3"/><text x="24" y="46">8 × T200 İTİCİ</text></g>',
-    '<g class="bp-call" style="--c:2.35s"><path d="M444 190 L476 40 H548"/><circle cx="444" cy="190" r="3"/><text x="548" y="34" text-anchor="end">STEREO KAMERA</text></g>',
-    '<g class="bp-call" style="--c:2.6s"><path d="M318 288 L300 336 H200"/><circle cx="318" cy="288" r="3"/><text x="200" y="350">DVL · 4 AKUSTİK IŞIN</text></g>',
-    '<g class="bp-call" style="--c:2.85s"><path d="M240 200 L220 160"/><circle cx="240" cy="200" r="3"/><text x="160" y="154">AKRİLİK TÜP</text></g>',
-    // sonar scan sweep
-    '<g class="bp-scan"><rect x="-90" y="0" width="90" height="360" fill="url(#bpScan)"/></g>',
-    '</svg>'
-  ].join('');
-  function HeroBlueprint() {
-    return h('figure', { className: 'bp', role: 'img', 'aria-label': 'D6-AUV su altı aracının ölçülü teknik çizimi: karbon şasi, akrilik tüp, sekiz itici, DVL ve stereo kamera' },
-      h('div', { className: 'bp-frame', dangerouslySetInnerHTML: { __html: BLUEPRINT } }),
-      h('figcaption', { className: 'bp-cap' },
-        h('span', null, h('b', null, 'D6-AUV'), ' · TEKNİK ÇİZİM'),
-        h('span', { className: 'bp-cap-r' }, 'REV 0.3 · ÖLÇEK 1:5')));
+  // Açılış: kaydırmayla oynayan dalış filmi (js/dive-hero.js). Açılış kartı ilk parçada çerçevesinden ayrılır; başlık sol üste,
+  // bölüm listesi sol alta yerleşir. Sonraki üç parçada sağda kısa bölüm yazıları belirir. Film kaydırma bitince yavaşça durur.
+  var HERO_IDX = [['hakkimizda', 'Hakkımızda'], ['arac', 'Araç'], ['film', 'Film'], ['takim', 'Takım'], ['yol', 'Yol Haritası'], ['sponsor', 'Sponsorlar'], ['iletisim', 'İletişim']];
+  var ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+  var BUBBLES = [[8, 9, 14, 0, 18], [17, 5, 11, 4, -10], [29, 12, 16, 2, 30], [41, 6, 12, 7, -20], [58, 10, 15, 1, 24], [66, 4, 10, 5, -14], [77, 14, 18, 3, 16], [88, 7, 13, 8, -26], [94, 5, 9, 2, 10], [50, 8, 17, 9, 0]];
+  var BOKEH = [[6, 18, 34, 0], [21, 72, 22, 3], [47, 12, 16, 5], [71, 64, 44, 2], [86, 22, 26, 6], [93, 80, 18, 1], [36, 88, 30, 4]];
+  var DIVE_CHAPTERS = [
+    { k: 1, kick: 'İNİŞ', title: 'Yüzeyden derine.', text: 'Işık azaldıkça iş zorlaşır. D6-ROV, karanlık suda da yönünü kaybetmeden ilerlemek için tasarlanıyor.' },
+    { k: 2, kick: 'ARAÇ', title: 'Su altında görmek.', text: 'Kamerasıyla kapıları, şekilleri ve renkleri tanıyor; kararlı manevralarla görevine odaklanıyor.' },
+    { k: 3, kick: 'HEDEF', title: 'Derinliğe hazır bir takım.', text: 'İlk büyük hedefimiz TEKNOFEST 2027 İnsansız Su Altı Sistemleri Yarışması.', cta: true }
+  ];
+  function Hero() {
+    var track = React.useRef(null), stage = React.useRef(null);
+    React.useEffect(function () {
+      var section = track.current, scene = stage.current;
+      var card = scene.querySelector('.lay-card'), title = scene.querySelector('.lay-title'), idx = scene.querySelector('.lay-idx');
+      function measure() {
+        // where the title and the index end up once the card has let go (top-left / bottom-left, aligned with .wrap)
+        var cx = card.offsetLeft - card.offsetWidth / 2, cy = card.offsetTop - card.offsetHeight / 2;
+        var left = Math.max(20, (window.innerWidth - 1100) / 2 + 32);
+        scene.style.setProperty('--tx', (left - cx - title.offsetLeft) + 'px');
+        scene.style.setProperty('--ty', (92 - cy - title.offsetTop) + 'px');
+        scene.style.setProperty('--lx', (left - cx - idx.offsetLeft) + 'px');
+        scene.style.setProperty('--ly', (scene.offsetHeight - idx.offsetHeight - 92 - cy - idx.offsetTop) + 'px');
+      }
+      measure();
+      window.addEventListener('resize', measure);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
+      var api = window.D6Dive ? window.D6Dive.mount(section, scene) : null;
+      return function () {
+        window.removeEventListener('resize', measure);
+        if (api) api.dispose();
+      };
+    }, []);
+
+    var segs = (window.D6Dive && window.D6Dive.segments) || [];
+    function layer(cls, kids) { return h('div', { className: 'lay-l ' + cls, 'aria-hidden': true }, kids); }
+    return h('section', { className: 'lay dive', ref: track, 'data-section': 'hero', 'aria-labelledby': 'dive-title' },
+      h('div', { className: 'lay-stage', ref: stage },
+        h('div', { className: 'dive-media', 'aria-hidden': true }, segs.map(function (sg, i) {
+          return h('figure', { key: i, className: 'dive-layer', 'data-dive-layer': '', 'data-on': i === 0 ? '' : undefined },
+            h('picture', null,
+              h('source', { media: '(max-width: 860px)', srcSet: sg.mposter }),
+              h('img', { src: sg.poster, alt: '', width: 1280, height: 720, decoding: 'async', loading: i === 0 ? 'eager' : 'lazy', fetchPriority: i === 0 ? 'high' : 'low' })),
+            h('video', { muted: true, playsInline: true, preload: 'auto', disablePictureInPicture: true, tabIndex: -1 }));
+        })),
+        layer('lay-bub', BUBBLES.map(function (b, i) {
+          return h('i', { key: i, style: { left: b[0] + '%', '--s': b[1] + 'px', '--t': b[2] + 's', '--d': -b[3] + 's', '--w': b[4] + 'px' } });
+        })),
+        layer('lay-bokeh', BOKEH.map(function (b, i) {
+          return h('i', { key: i, style: { left: b[0] + '%', top: b[1] + '%', '--s': b[2] + 'px', '--d': -b[3] + 's' } });
+        })),
+        layer('lay-shade'),
+        h('div', { className: 'lay-card' },
+          h('div', { className: 'lay-title' },
+            h('p', { className: 'lay-kick' }, 'D6-ROV · SU ALTI ROBOTİĞİ'),
+            h('h1', { id: 'dive-title' }, 'Deniz', h('em', null, '6')),
+            h('p', null, 'Uzaktan kumandalı su altı aracımızı tasarlıyor, üretiyor ve havuzda test ediyoruz.')),
+          h('ul', { className: 'lay-idx' }, HERO_IDX.map(function (it, i) {
+            return h('li', { key: it[0] }, h('a', { href: '#' + it[0], onClick: jump(it[0]) }, it[1], h('span', null, ROMAN[i])));
+          }))),
+        h('div', { className: 'dive-chapters' }, DIVE_CHAPTERS.map(function (c) {
+          return h('article', { key: c.k, className: 'dive-ch', 'data-dive-chapter': c.k },
+            h('p', { className: 'dive-ch-kick' }, c.kick),
+            h('h2', null, c.title),
+            h('p', null, c.text),
+            c.cta ? h('div', { className: 'dive-ch-actions' },
+              h('a', { className: 'dive-cta', href: '#arac', onClick: jump('arac') }, 'Aracı keşfet'),
+              h('a', { className: 'dive-link', href: '#iletisim', onClick: jump('iletisim') }, 'Bize ulaşın', h('span', { 'aria-hidden': true }, '→'))) : null);
+        })),
+        h('div', { className: 'dive-meter', 'aria-hidden': true }, h('span'))));
   }
 
   // Kaydırmayla ilerleyen tam ekran 3B deneyim: içerik ve sahne js/auv/auv-scene.js'te kurulur.
@@ -101,24 +111,20 @@
       ] });
       return function () { if (api) api.dispose(); };
     }, []);
-    return h('div', { ref: ref, id: 'deneyim', role: 'region', 'aria-label': 'D6-AUV aracının bölüm bölüm anlatıldığı kaydırmalı 3B deneyim' });
+    return h('div', { ref: ref, id: 'deneyim', role: 'region', 'aria-label': 'D6-ROV aracının bölüm bölüm anlatıldığı kaydırmalı 3B deneyim' });
   }
 
-  // Kaydırma hızına göre akan büyük yazı bandı (hareket js/fx.js'te).
-  function KineticBand() {
-    var words = [['OTONOM', ''], ['8 İTİCİ', 'is-hl'], ['6 DOF', ''], ['DERİNLİĞE HAZIR', 'is-fill'], ['OTONOM SEYİR', ''], ['DENİZ6', 'is-hl']];
-    function row(k) {
-      var items = [];
-      for (var r = 0; r < 2; r++) words.forEach(function (w, i) { items.push(h('span', { key: k + r + 'w' + i, className: w[1] }, w[0])); items.push(h('em', { key: k + r + 'e' + i })); });
-      return h('div', { className: 'fx-band-row', key: k }, items);
-    }
-    return h('div', { className: 'fx-band', 'data-fx-band': '', 'aria-hidden': true }, row('a'), row('b'));
-  }
-
-  // Tanıtım filmi: tools/film/ ile önceden render edilmiş MP4 (oynatıcı js/film-player.js).
+  // Tanıtım filmi: Higgsfield ile üretilmiş gerçekçi 30 saniyelik su altı filmi (oynatıcı js/film-player.js).
+  // Dosyalar herkese açık bir CDN'de durur; klasöre indirmek için tools/dalis-indir.bat çalıştırıp FILM_LOCAL = true yapın.
+  // Eski, kodla çizilmiş film media/d6-auv-film-*.mp4 olarak klasörde duruyor.
+  var FILM_LOCAL = false;
+  var FILM_CDN = 'https://d2ol7oe51mr4n9.cloudfront.net/user_35HNBDu3uKRRyb5p5xObPbRnVCj/';
+  function filmFile(local, remote) { return FILM_LOCAL ? 'media/film/' + local : FILM_CDN + remote; }
   var FILM = {
-    src: 'media/d6-auv-film-1080.mp4', srcSmall: 'media/d6-auv-film-720.mp4', poster: 'media/d6-auv-film-poster.jpg', duration: 30,
-    label: 'D6-AUV tanıtım filmi: araç karanlıkta fenerlerini yakıyor, deniz tabanında süzülüyor, yana kayıp yerinde dönüyor, kapıdan geçiyor, torpido atıyor ve yüzeye doğru yükseliyor',
+    src: filmFile('d6-rov-film-720.mp4', '6b7fe4e1-4939-4f4a-b215-2e952506beae.mp4'),
+    srcSmall: filmFile('d6-rov-film-540.mp4', 'd657493a-c550-4b74-8e91-5d80c9898e46.mp4'),
+    poster: filmFile('d6-rov-film-poster.jpg', 'ee98faf6-db64-4b82-ab01-7ff82cd7c65c.jpg'), duration: 30,
+    label: 'D6-ROV tanıtım filmi: araç karanlıkta fenerlerini yakıyor, havuz tabanında süzülüyor, iticilerini çalıştırıyor, yana kayıp yerinde dönüyor, kapıdan geçiyor, torpido atıyor ve yüzeye doğru yükseliyor',
     chapters: [[0, 'UYANIŞ'], [4.5, 'SÜZÜLÜŞ'], [9, 'İTKİ'], [13, 'ÇEVİKLİK'], [17, 'KAPI'], [22, 'ATIŞ'], [26.5, 'YÜKSELİŞ']]
   };
   // A section whose inner DOM and behaviour belong to a vanilla module in js/cine/ (mounted once, disposed on unmount).
@@ -132,7 +138,7 @@
   // Sinema penceresi: kaydırdıkça bir lumboz açılır ve filme geçer (js/cine/window.js).
   var WINDOW = {
     film: FILM, still: 'img/renders/kapiya-yaklasma.webp', still800: 'img/renders/kapiya-yaklasma-800.webp', lq: 'img/renders/kapiya-yaklasma-lq.webp',
-    glow: 'img/renders/cine-glow.webp', ambientStrip: 'media/d6-ambient.webp', sprite: 'media/d6-chapters.webp'
+    glow: 'img/renders/cine-glow.webp', ambientStrip: filmFile('d6-rov-ambient.webp', '1654dda9-8e6a-4a44-b915-9ac1e8f1a53c.webp'), sprite: filmFile('d6-rov-chapters.webp', '3b436e29-e996-4500-844a-7e718a0eb831.webp'), static: true
   };
   function CineWindow() {
     var ref = React.useRef(null);
@@ -192,7 +198,15 @@
         cell('bx-wide bx-camcell', 120, [h('div', { key: 'v', className: 'bx-v bx-cam', 'aria-hidden': true }, h('i', { className: 'bx-scan' }), h('span', { className: 'bx-box' }, h('em', null, 'KAPI 0.97'))),
           h('p', { key: 'n', className: 'bx-num bx-num-sm' }, 'Stereo + alt kamera'), h('p', { key: 'l', className: 'bx-lbl' }, 'GÖRÜNTÜ İŞLEME'), h('p', { key: 'd', className: 'bx-desc' }, 'Kapı, renk ve kablo tespiti; derinlik için stereo eşleştirme.')]),
         cell('', 200, [h('p', { key: 'n', className: 'bx-num' }, '≈18', h('small', null, 'kg')), h('p', { key: 'l', className: 'bx-lbl' }, 'HEDEF KÜTLE'), h('p', { key: 'd', className: 'bx-desc' }, 'İki kişiyle taşınabilir.')]),
-        cell('bx-accent', 260, [h('p', { key: 'n', className: 'bx-num' }, '0'), h('p', { key: 'l', className: 'bx-lbl' }, 'İNSAN MÜDAHALESİ'), h('p', { key: 'd', className: 'bx-desc' }, 'Görev başladıktan sonra her karar araçta.')])));
+        cell('bx-accent', 260, [h('p', { key: 'n', className: 'bx-num' }, '1'), h('p', { key: 'l', className: 'bx-lbl' }, 'GÖBEK KABLOSU'), h('p', { key: 'd', className: 'bx-desc' }, 'Güç ve veri tek kabloda; pilot yer istasyonundan yönetir.')])));
+  }
+
+  // Bölümler arası derinlik işareti: göründüğünde sonar çizgisi çizilir ve derinlik etiketi belirir.
+  function DepthMark(p) {
+    return h(D.Reveal, { className: 'dm', 'aria-hidden': true },
+      h('span', { className: 'dm-line' }, h('i')),
+      h('span', { className: 'dm-val' }, '−' + p.d + ' m'),
+      h('span', { className: 'dm-line dm-line-r' }, h('i')));
   }
 
   function teamCard(m, i) {
@@ -201,8 +215,8 @@
     if (m.profile) links.push({ label: (m.name || 'Üye') + ' profil', icon: 'baglanti', href: m.profile });
     return h(D.Reveal, { key: i, delay: (i % 3) * 100 },
       h(D.TeamCard, {
-        name: m.name || 'Ad Soyad', initials: m.name ? undefined : ('0' + (i + 1)).slice(-2),
-        photo: m.photo || undefined, role: m.role, unit: m.unit, tone: m.tone, links: links
+        name: m.name || m.role,
+        photo: m.photo || undefined, role: m.name ? m.role : undefined, unit: m.unit, tone: m.tone, links: links
       }));
   }
 
@@ -212,10 +226,17 @@
     var sonarSize = Math.min(340, Math.max(240, window.innerWidth - 40));
 
     React.useEffect(function () {
-      var io = new IntersectionObserver(function (es) {
-        es.forEach(function (e) { if (e.isIntersecting) setActive(e.target.getAttribute('data-section')); });
-      }, { root: null, rootMargin: '-45% 0px -50% 0px' });
-      document.querySelectorAll('[data-section]').forEach(function (el) { io.observe(el); });
+      var sections = document.querySelectorAll('[data-section]'), io;
+      function observeSections() {
+        if (io) io.disconnect();
+        var midpoint = Math.floor(window.innerHeight / 2);
+        io = new IntersectionObserver(function (es) {
+          es.forEach(function (e) { if (e.isIntersecting) setActive(e.target.getAttribute('data-section')); });
+        }, { rootMargin: '-' + midpoint + 'px 0px -' + Math.max(0, window.innerHeight - midpoint - 1) + 'px 0px' });
+        sections.forEach(function (el) { io.observe(el); });
+      }
+      observeSections();
+      window.addEventListener('resize', observeSections);
       // Footer görünür olunca derinlik göstergesi çekilir, footer sütunlarının üstüne binmez.
       var fo = new IntersectionObserver(function (es) { setFooterIn(es[0].isIntersecting); }, { root: null, rootMargin: '0px 0px -25% 0px' });
       var footer = document.querySelector('.dz-footer');
@@ -223,7 +244,7 @@
       if (location.hash.length > 1) {
         try { var el = document.getElementById(decodeURIComponent(location.hash.slice(1))); if (el) el.scrollIntoView({ block: 'start' }); } catch (err) { /* bozuk adres parçası */ }
       }
-      return function () { io.disconnect(); fo.disconnect(); };
+      return function () { window.removeEventListener('resize', observeSections); io.disconnect(); fo.disconnect(); };
     }, []);
 
     var footerCols = [
@@ -239,35 +260,23 @@
       h('a', { className: 'skip-link', href: '#hakkimizda', onClick: jump('hakkimizda') }, 'İçeriğe geç'),
       h(D.NavBar, { links: LINKS, active: active, logo: C.logo || undefined, cta: { id: 'iletisim', label: 'Bize ulaşın', href: '#iletisim' }, onNavigate: function (l, e) { goTo(l.id, e); }, brandHref: '#' }),
       h('main', null,
-        h('div', { 'data-section': 'hero', className: 'hero-slot' },
-          h(D.Hero, {
-            eyebrow: 'OTONOM SU ALTI ARACI · D6-AUV',
-            title: 'Derinliğe hazır bir takım.', highlight: 'derinliğe',
-            lead: 'Deniz6, kendi otonom su altı aracını tasarlayan, üreten ve havuzda test eden bir mühendislik takımı. Karanlıkta görebilen, kendi kararını veren bir araç yapıyoruz.',
-            actions: h(React.Fragment, null,
-              h(D.Button, { size: 'lg', icon: 'ok-asagi', href: '#arac', onClick: jump('arac') }, 'Aracı keşfet'),
-              h(D.Button, { size: 'lg', variant: 'secondary', href: '#sponsor', onClick: jump('sponsor') }, 'Sponsor olun')),
-            meta: h(React.Fragment, null, h(D.Badge, { tone: 'biolume', pulse: true }, 'TASARIM SÜRÜYOR'), h(D.Badge, null, 'TÜRKİYE')),
-            aside: h(HeroBlueprint),
-            minHeight: '100svh', cueHref: '#hakkimizda', onCue: jump('hakkimizda')
-          })),
-        h(D.DepthGauge, { fixed: true, max: 30, height: 260, className: active === 'hero' || active === 'yuzey' || footerIn ? 'gauge-hidden' : '' }),
+        h(Hero),
         h('div', { className: 'depth-bg' },
 
           h('section', { id: 'hakkimizda', 'data-section': 'hakkimizda', className: 'block' },
             h('div', { className: 'wrap split' },
               h('div', { className: 'prose' },
-                h(D.SectionHeader, { index: '01', eyebrow: 'HAKKIMIZDA', title: 'Denizin altını merak eden bir takım.', lead: 'Kendi tasarladığımız ve ürettiğimiz otonom bir su altı aracıyla derinliğe iniyoruz.' }),
+                h(D.SectionHeader, { index: '01', eyebrow: 'HAKKIMIZDA', title: 'Denizin altını merak eden bir takım.', lead: 'Kendi tasarladığımız ve ürettiğimiz uzaktan kumandalı bir su altı aracıyla derinliğe iniyoruz.' }),
                 h(D.Reveal, { as: 'p', delay: 240 }, 'Mekanik, elektronik ve yazılımı aynı masada buluşturuyoruz. Amacımız; havuzdaki görevleri kamerayla algılayan, kararlı manevra yapan ve güvenle yüzeye dönen bir araç ortaya koymak. İlk büyük hedefimiz TEKNOFEST 2027 İnsansız Su Altı Sistemleri Yarışması.'),
                 h('div', { className: 'stats' }, (C.stats || []).map(function (st, i) { return h(D.StatCounter, Object.assign({ key: i }, st)); }))),
               h(D.Reveal, { effect: 'scale', delay: 150, className: 'sonar-slot' },
                 h(D.SonarRadar, { size: sonarSize, blips: [{ angle: 40, distance: 0.55, label: 'KAPI' }, { angle: 135, distance: 0.72, label: 'HEDEF', tone: 'signal' }, { angle: 250, distance: 0.42, label: 'ENGEL' }, { angle: 312, distance: 0.82 }] })))),
 
+          h(DepthMark, { d: 6 }),
           h('section', { id: 'arac', 'data-section': 'arac', className: 'block' },
             h('div', { className: 'wrap' },
-              h(D.SectionHeader, { index: '02', eyebrow: 'ARAÇ', title: 'Su altında görmek, karar vermek, ilerlemek.', lead: 'Aşağı kaydırın: D6-AUV karanlıktan yaklaşıyor, gövdesini ve iticilerini gösteriyor, parçalarına ayrılıyor, sensörlerini açıyor, kapıdan geçip hedefe torpido atıyor. Dört alt sistemin her biri ayrı bir ekip tarafından geliştiriliyor.' })),
+              h(D.SectionHeader, { index: '02', eyebrow: 'ARAÇ', title: 'Su altında görmek, yönlendirmek, ilerlemek.', lead: 'Aşağı kaydırın; D6-ROV bölüm bölüm açılıyor.' })),
             h(AUVExperience),
-            h(KineticBand),
             h('div', { className: 'wrap' },
               h('div', { className: 'grid4' },
                 h(D.Reveal, { delay: 0 }, h(D.SubsystemCard, { icon: 'disli', index: '01', title: 'Mekanik', description: 'Su geçirmez gövde, yüzerlik dengesi ve itici yerleşimi.', specs: [{ label: 'ODAK', value: 'Sızdırmazlık' }, { label: 'ARAÇ', value: 'CAD · CFD' }] })),
@@ -283,11 +292,13 @@
               h(D.SectionHeader, { eyebrow: 'KARELER', title: 'Görev anları.' }),
               h(Kareler))),
 
+          h(DepthMark, { d: 12 }),
           h('section', { id: 'takim', 'data-section': 'takim', className: 'block' },
             h('div', { className: 'wrap' },
               h(D.SectionHeader, { index: '03', eyebrow: 'TAKIM', title: 'Aynı derinlikte, aynı hedefte.', lead: 'Her üye bir alt sistemden sorumlu; kararları birlikte alıyoruz.' }),
               h('div', { className: 'grid3' }, (C.team || []).map(teamCard)))),
 
+          h(DepthMark, { d: 18 }),
           h('section', { id: 'yol', 'data-section': 'yol', className: 'block' },
             h('div', { className: 'wrap' },
               h(D.SectionHeader, { index: '04', eyebrow: 'YOL HARİTASI', title: 'Derinliğe giden rota.', lead: 'Takvimdeki her aşama, aracımızı bir adım daha derine taşıyor.' }),
@@ -298,26 +309,27 @@
                   { date: 'AŞAMA 03', title: 'Ön Tasarım Raporu', description: 'Kavramsal tasarım, bütçe ve iş planı.' },
                   { date: 'AŞAMA 04', title: 'Kritik Tasarım Raporu', description: 'Detaylı tasarım, analizler ve test planı.' },
                   { date: 'AŞAMA 05', title: 'Üretim ve testler', description: 'Havuz testleri ve yeterlilik videosu.' },
-                  { date: 'AŞAMA 06', title: 'Final', description: 'TEKNOFEST 2027 · havuzda tam otonom görev.' }
+                  { date: 'AŞAMA 06', title: 'Final', description: 'TEKNOFEST 2027 · havuzda pilotlu görev.' }
                 ] })))),
 
+          h(DepthMark, { d: 24 }),
           h('section', { id: 'sponsor', 'data-section': 'sponsor', className: 'block' },
             h('div', { className: 'wrap' },
               h('div', { className: 'sponsor-head' },
                 h(D.SectionHeader, { index: '05', eyebrow: 'SPONSORLAR', title: 'Derine birlikte inelim.', lead: 'Desteğiniz malzeme, üretim ve havuz testi giderlerimizi karşılıyor. Logonuz aracımızda ve tüm iletişimimizde yer alır.' }),
                 h(D.Reveal, { delay: 200 }, h(D.Button, { variant: 'signal', size: 'lg', iconLeft: 'odul', href: '#iletisim', onClick: jump('iletisim') }, 'Sponsorluk dosyasını isteyin')))),
-            h('div', { className: 'mq-wrap' },
-              h(D.SponsorMarquee, { items: C.sponsors || [] }))),
+            C.sponsors && C.sponsors.length ? h('div', { className: 'mq-wrap' },
+              h(D.SponsorMarquee, { items: C.sponsors })) : null),
 
+          h(DepthMark, { d: 28 }),
           h('section', { id: 'iletisim', 'data-section': 'iletisim', className: 'block' },
             h('div', { className: 'wrap' },
               h(D.Reveal, { effect: 'scale', className: 'cta' },
                 h(D.Bubbles, { count: 14, seed: 21 }),
                 h('p', { className: 'eyebrow' }, '06 — İLETİŞİM'),
-                h('h2', null, 'Geri sayım başladı.'),
+                h('h2', null, 'Haberleşelim.'),
                 h('p', null, 'Sponsorluk, iş birliği veya sadece merhaba demek için bize yazın. Her mesaj takımın tamamına ulaşır.'),
                 h('div', { className: 'cta-row' },
-                  C.countdown ? h(D.Countdown, C.countdown) : null,
                   h('div', { className: 'cta-actions' },
                     h(D.Button, { size: 'lg', iconLeft: 'eposta', href: mailto }, 'Bize yazın'),
                     h(D.Button, { size: 'lg', variant: 'secondary', icon: 'ok-sag', href: '#sponsor', onClick: jump('sponsor') }, 'Sponsor olun')))))),
@@ -326,13 +338,13 @@
 
       h(D.Footer, {
         logo: C.logo || undefined,
-        tagline: 'Kendi otonom su altı aracını tasarlayan, üreten ve test eden mühendislik takımı.',
+        tagline: 'Kendi uzaktan kumandalı su altı aracını (ROV) tasarlayan, üreten ve test eden mühendislik takımı.',
         contact: contact, columns: footerCols,
-        bottomRight: 'DENİZ6 · OTONOM SU ALTI ARACI'
+        bottomRight: 'DENİZ6 · UZAKTAN KUMANDALI SU ALTI ARACI'
       }),
       // the last frame of the page: the name, lit by the surface light from the film's final shot
       h('div', { className: 'surface-mark', 'aria-hidden': true },
-        h('p', { className: 'surface-mark__k' }, '0 m · YÜZEY · D6-AUV'),
+        h('p', { className: 'surface-mark__k' }, '0 m · YÜZEY · D6-ROV'),
         h('span', { className: 'surface-mark__w' }, 'DENİZ6')));
   }
 

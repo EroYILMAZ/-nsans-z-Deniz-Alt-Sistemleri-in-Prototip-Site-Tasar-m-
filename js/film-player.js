@@ -61,7 +61,7 @@
     var big = el('button', 'film-play', frame); big.type = 'button'; big.setAttribute('aria-label', 'Filmi izle, ' + spoken(dur));
     big.innerHTML = '<span class="film-play-ring">' + ICON.play + '</span><span class="film-play-txt">FİLMİ İZLE · ' + fmt(dur) + '</span>';
     var tag = el('div', 'film-tag', frame);
-    el('i', null, tag); el('span', null, tag, cfg.tag || 'D6-AUV · TANITIM FİLMİ');
+    el('i', null, tag); el('span', null, tag, cfg.tag || 'D6-ROV · TANITIM FİLMİ');
 
     var ui = el('div', 'film-ui', frame);
     var toggle = el('button', 'film-btn', ui); toggle.type = 'button'; toggle.innerHTML = ICON.play; toggle.setAttribute('aria-label', 'Oynat');

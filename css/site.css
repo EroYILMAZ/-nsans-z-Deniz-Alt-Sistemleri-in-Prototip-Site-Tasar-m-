@@ -9,8 +9,182 @@ body { min-height: 100vh; scrollbar-color: var(--line-strong) var(--surface-sunk
 @supports not (overflow: clip) { body { overflow-x: hidden; } }
 .depth-bg { background: var(--surface); }
 .dz-wm-logo { display: block; align-self: center; height: 1.5em; width: auto; margin-right: .4em; }
-.hero-slot > .dz-hero { margin-top: -72px; }
+.site .dz-nav-inner { height: 72px; }
 [data-section] { scroll-margin-top: 56px; }
+
+/* Opening scene: a full-bleed underwater plate (rendered with tools/film, no vehicle in it) with vehicle cut-outs layered at
+   different depths. Layers drift with the mouse by depth (--mx/--my, -1..1); while scrolling (--p, 0..1) the camera dives in,
+   the vehicles part and the title card lets go of its frame. Each layer's <img> also floats on its own idle loop. */
+.lay {
+  --ink: #eff9fb;
+  --acc: #55e6d2;
+  --left: max(20px, calc((100vw - 1100px) / 2 + 32px));
+  margin-top: -72px;
+  height: 220vh;
+  background: #041321;
+  color: var(--ink);
+}
+.lay-stage {
+  --mx: 0; --my: 0; --p: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+  background: #0b3a52;
+}
+.lay-l { position: absolute; pointer-events: none; will-change: transform; }
+.lay-l img { display: block; width: 100%; height: auto; }
+
+/* the empty pool: slow push-in while scrolling, barely moves with the mouse (it is the farthest layer) */
+.lay-plate {
+  inset: -4%;
+  transform: translate3d(calc(var(--mx) * -10px), calc(var(--my) * -6px + var(--p) * -4vh), 0) scale(calc(1 + var(--p) * .22));
+  filter: brightness(calc(1 - var(--p) * .45));
+}
+.lay-plate img { width: 100%; height: 100%; object-fit: cover; object-position: 52% 60%; animation: lay-plate-in 2.4s var(--dz-ease-out, ease-out) both; }
+@keyframes lay-plate-in { from { opacity: 0; transform: scale(1.08); filter: blur(8px); } }
+
+.lay-rays {
+  inset: -10% -20% 35%;
+  background: repeating-linear-gradient(104deg, transparent 0 8%, #c8f6ff12 10%, transparent 13% 21%, #c8f6ff0b 23%, transparent 26% 33%);
+  mask-image: linear-gradient(#000, transparent 80%);
+  mix-blend-mode: screen;
+  transform: translate3d(calc(var(--mx) * -16px), calc(var(--p) * -8vh), 0);
+  animation: lay-rays 14s ease-in-out infinite alternate;
+}
+@keyframes lay-rays { to { background-position: 18vw 0; opacity: .65; } }
+
+/* depth haze: everything behind it is pushed back into the water */
+.lay-haze { inset: 0; background: linear-gradient(180deg, #0f4d6a00 20%, #0f4d6a40 55%, #0a334a00 90%); }
+
+.lay-far {
+  left: 44.5%; top: 53%; width: clamp(90px, 7vw, 140px);
+  opacity: calc(.8 + var(--p) * .2);
+  /* while scrolling, this far vehicle comes through the gate toward the camera and out of the haze */
+  filter: blur(calc(1.4px - var(--p) * 1.4px)) brightness(calc(.62 + var(--p) * .3)) saturate(calc(.45 + var(--p) * .4)) contrast(.85);
+  transform: translate3d(calc(var(--mx) * -18px - var(--p) * 4vw), calc(var(--my) * -10px + var(--p) * 6vh), 0) scale(calc(1 + var(--p) * 2.6));
+}
+.lay-far img { animation: lay-float 9s ease-in-out -2s infinite, lay-in-far 2.6s .5s var(--dz-ease-out, ease-out) both; }
+
+.lay-b {
+  right: 3%; top: 13%; width: clamp(220px, 25vw, 440px);
+  filter: brightness(.86) saturate(.85) drop-shadow(0 30px 30px #0006);
+  transform: translate3d(calc(var(--mx) * -34px + var(--p) * 18vw), calc(var(--my) * -20px - var(--p) * 26vh), 0) rotate(calc(6deg + var(--p) * 10deg));
+}
+.lay-b img { animation: lay-float 7s ease-in-out -4s infinite, lay-in-b 2.2s .35s var(--dz-ease-out, ease-out) both; }
+
+.lay-a {
+  right: 5%; bottom: 3%; width: clamp(320px, 44vw, 800px);
+  filter: saturate(.92) brightness(.96) drop-shadow(0 50px 45px #000a);
+  transform: translate3d(calc(var(--mx) * -60px + var(--p) * 30vw), calc(var(--my) * -34px + var(--p) * 30vh), 0) rotate(calc(-3deg + var(--p) * -6deg)) scale(calc(1 + var(--p) * .35));
+}
+.lay-a img { animation: lay-float 6s ease-in-out infinite, lay-in-a 2s .15s var(--dz-ease-out, ease-out) both; }
+
+@keyframes lay-float { 50% { translate: 0 -1.6%; rotate: .8deg; } }
+@keyframes lay-in-a { from { opacity: 0; transform: translate3d(12%, 16%, 0) scale(.92); filter: blur(6px); } }
+@keyframes lay-in-b { from { opacity: 0; transform: translate3d(8%, -18%, 0) rotate(8deg); filter: blur(6px); } }
+@keyframes lay-in-far { from { opacity: 0; transform: translate3d(0, 30%, 0); } }
+
+.lay-bub { inset: 0; transform: translate3d(calc(var(--mx) * -46px), calc(var(--my) * -24px - var(--p) * 30vh), 0); }
+.lay-bub i {
+  position: absolute; bottom: -20px; width: var(--s); height: var(--s);
+  border: 1px solid #c9f6ff66; border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, #ffffff55, transparent 45%);
+  animation: lay-rise var(--t) linear var(--d) infinite;
+}
+@keyframes lay-rise { to { transform: translate3d(var(--w), -110vh, 0); } }
+/* out-of-focus specks right in front of the lens: the nearest layer, moves the most */
+.lay-bokeh { inset: 0; transform: translate3d(calc(var(--mx) * -90px), calc(var(--my) * -50px - var(--p) * 45vh), 0); }
+.lay-bokeh i {
+  position: absolute; width: var(--s); height: var(--s); border-radius: 50%;
+  background: radial-gradient(circle, #d8fbff33 0 40%, #d8fbff10 62%, transparent 70%);
+  filter: blur(2px);
+  animation: lay-drift 11s ease-in-out var(--d) infinite alternate;
+}
+@keyframes lay-drift { to { transform: translate3d(18px, -26px, 0); opacity: .5; } }
+
+/* title card, aligned with the page column. While scrolling it lets go of its frame,
+   the title drifts to the top-left and the index to the bottom-left. */
+.lay-card {
+  position: absolute; z-index: 3;
+  --w: min(340px, 78vw);
+  left: calc(var(--left) + var(--w) / 2); top: 52%;
+  width: var(--w);
+  padding: 26px 24px 20px;
+  transform: translate(-50%, -50%) translate3d(calc(var(--mx) * -8px), calc(var(--my) * -5px), 0);
+  animation: lay-card-in 1.4s .6s var(--dz-ease-out, ease-out) both;
+}
+@keyframes lay-card-in { from { opacity: 0; translate: 0 24px; } }
+.lay-card::before {
+  position: absolute; inset: 0; content: '';
+  border: 1px solid #e7fbffb3;
+  background: linear-gradient(160deg, #06243a66, #04132133);
+  backdrop-filter: blur(6px) saturate(1.2);
+  -webkit-backdrop-filter: blur(6px) saturate(1.2);
+  opacity: calc(1 - var(--p) * 2.4);
+  transform: scale(calc(1 + var(--p) * .25));
+}
+/* crop marks on two corners of the frame */
+.lay-card::after {
+  position: absolute; inset: -7px; content: ''; pointer-events: none;
+  background:
+    linear-gradient(var(--acc), var(--acc)) 0 0 / 14px 2px, linear-gradient(var(--acc), var(--acc)) 0 0 / 2px 14px,
+    linear-gradient(var(--acc), var(--acc)) 100% 100% / 14px 2px, linear-gradient(var(--acc), var(--acc)) 100% 100% / 2px 14px;
+  background-repeat: no-repeat;
+  opacity: calc(1 - var(--p) * 3);
+}
+.lay-title, .lay-idx { position: relative; will-change: transform; }
+.lay-title { transform: translate3d(calc(var(--p) * var(--tx, 0px)), calc(var(--p) * var(--ty, 0px)), 0) scale(calc(1 - var(--p) * .3)); transform-origin: 0 0; }
+.lay-idx { transform: translate3d(calc(var(--p) * var(--lx, 0px)), calc(var(--p) * var(--ly, 0px)), 0); }
+.lay-kick { margin: 0 0 12px; font: 600 11px/1.4 var(--font-mono); letter-spacing: .14em; color: var(--acc); }
+.lay-title h1 { margin: 0; font: 800 clamp(40px, 4.4vw, 60px)/.92 var(--font-display); letter-spacing: -.03em; text-shadow: 0 6px 30px #0208104d; }
+.lay-title h1 em { font-style: normal; color: var(--acc); }
+.lay-title p { margin: 14px 0 0; font: 500 14px/1.5 var(--font-body); color: #d2e8ee; max-width: 27ch; opacity: calc(1 - var(--p) * 2.5); }
+.lay-idx { list-style: none; margin: 22px 0 0; padding: 14px 0 0; border-top: 1px solid #e7fbff33; }
+.lay-idx li { animation: lay-li-in .7s var(--dz-ease-out, ease-out) both; }
+.lay-idx li:nth-child(1) { animation-delay: 1s; }
+.lay-idx li:nth-child(2) { animation-delay: 1.06s; }
+.lay-idx li:nth-child(3) { animation-delay: 1.12s; }
+.lay-idx li:nth-child(4) { animation-delay: 1.18s; }
+.lay-idx li:nth-child(5) { animation-delay: 1.24s; }
+.lay-idx li:nth-child(6) { animation-delay: 1.3s; }
+.lay-idx li:nth-child(7) { animation-delay: 1.36s; }
+@keyframes lay-li-in { from { opacity: 0; translate: -10px 0; } }
+.lay-idx a {
+  display: flex; justify-content: space-between; gap: 16px;
+  padding: 1px 0; color: var(--ink); text-decoration: none;
+  font: 700 16px/1.3 var(--font-body); letter-spacing: -.01em;
+  transition: color .2s, translate .25s var(--dz-ease-out, ease-out);
+}
+.lay-idx a span { font: 500 10px/1.6 var(--font-mono); color: #9cc3ce; letter-spacing: .08em; }
+.lay-idx a:hover, .lay-idx a:focus-visible { color: var(--acc); outline: none; translate: 4px 0; }
+.lay-idx a:hover span { color: var(--acc); }
+.lay-shade { inset: auto 0 0; height: 34%; background: linear-gradient(transparent, #041321e6 70%, #041321); z-index: 2; opacity: calc(.75 + var(--p) * .25); }
+/* left-side scrim and vignette so the card reads on bright water */
+.lay-stage::after { position: absolute; inset: 0; z-index: 1; content: ''; pointer-events: none; background: linear-gradient(90deg, #041321b3, #04132100 48%), radial-gradient(ellipse 120% 80% at 50% 50%, transparent 60%, #020a12a6); }
+
+@media (max-width: 760px) {
+  .lay { height: 170vh; }
+  .lay-plate img { object-position: 56% 70%; }
+  .lay-a { right: -16%; bottom: 7%; width: 98vw; }
+  .lay-b { right: -8%; top: 9%; width: 58vw; }
+  .lay-far { left: 7%; top: 15%; width: 22vw; }
+  .lay-card { --w: min(320px, calc(100vw - 40px)); left: 50%; top: 44%; padding: 20px 18px 16px; }
+  .lay-title h1 { font-size: 40px; }
+  .lay-idx { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+  .lay-idx a { font-size: 14px; }
+  .lay-stage::after { background: linear-gradient(180deg, #04132166, #04132100 30%), radial-gradient(ellipse 120% 80% at 50% 50%, transparent 55%, #020a12a6); }
+  .lay-bokeh i:nth-child(n + 5) { display: none; }
+}
+@media (prefers-reduced-motion: reduce), print {
+  .lay { height: auto; }
+  .lay-stage { position: relative; }
+  .lay-l, .lay-title, .lay-idx { transform: none !important; }
+  .lay-l img, .lay-card, .lay-idx li, .lay-rays, .lay-bokeh i { animation: none !important; }
+  .lay-bub { display: none; }
+}
 
 .skip-link { position: fixed; left: var(--space-4); top: var(--space-3); z-index: 100; padding: var(--space-2) var(--space-4); border-radius: var(--radius-full); background: var(--biolume); color: var(--on-biolume); font-weight: 700; text-decoration: none; transform: translateY(-160%); transition: transform var(--dz-base) var(--dz-ease-out); }
 .skip-link:focus { outline: none; box-shadow: var(--focus-ring); transform: none; }

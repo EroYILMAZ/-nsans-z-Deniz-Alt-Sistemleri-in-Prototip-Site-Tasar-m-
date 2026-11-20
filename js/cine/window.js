@@ -59,7 +59,7 @@
     opts = opts || {};
 
     var flags = readFlags();
-    var pinned = !flags.reduce && !flags.lite && typeof C.scrub === 'function';
+    var pinned = !opts.static && !flags.reduce && !flags.lite && typeof C.scrub === 'function'; // opts.static: no opening animation, plain player
     var root = document.documentElement;
     var Film = window.D6Film;
 
@@ -82,7 +82,7 @@
     el('p', 'eyebrow cine-win__kick', head, 'TANITIM FİLMİ · 30 SN');
     var title = el('h2', 'cine-win__title', head);
     title.id = (section.id || 'cine-win') + '-baslik';
-    el('span', 'l', title, 'D6-AUV');
+    el('span', 'l', title, 'D6-ROV');
     title.appendChild(document.createTextNode(' '));
     el('span', 'r', title, 'iş başında.');
     section.setAttribute('aria-labelledby', title.id);
@@ -96,7 +96,7 @@
       if (opts.lq) lens.style.backgroundImage = cssUrl(opts.lq);
       if (opts.still) {
         img = el('img', 'cine-win__still', lens);
-        img.alt = 'D6-AUV kapıya yaklaşıyor';
+        img.alt = 'D6-ROV kapıya yaklaşıyor';
         img.decoding = 'async';
         img.loading = 'lazy'; // set before the source so the fetch waits for the viewport
         if (opts.still800) { img.sizes = '100vw'; img.srcset = opts.still800 + ' 800w, ' + opts.still + ' 1600w'; }

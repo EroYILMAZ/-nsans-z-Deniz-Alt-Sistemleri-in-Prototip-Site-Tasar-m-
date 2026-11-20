@@ -468,7 +468,7 @@
     function lbFill(si) {
       var s = stills[si], cv = s.cv;
       lbIdx = si;
-      lbImg.alt = 'D6-AUV film karesi: ' + (s.cap || labelOf(s));
+      lbImg.alt = 'D6-ROV film karesi: ' + (s.cap || labelOf(s));
       meta.textContent = 'KARE ' + frameNo(s) + ' / ' + pad(totalFrames, 4) + ' · ' + fmtT(s.t) + ' · ' + labelOf(s);
       text.textContent = s.cap || '';
       count.textContent = pad(si + 1, 2) + ' / ' + pad(stills.length, 2);

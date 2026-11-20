@@ -1,5 +1,5 @@
 /*
- * Deniz6 — D6-AUV temsili modeli (Three.js r160, tamamen prosedürel; dış dosya gerektirmez).
+ * Deniz6 — D6-ROV temsili modeli (Three.js r160, tamamen prosedürel; dış dosya gerektirmez).
  * Ölçek metre; burun +z, üst +y. Mimari, RoboSub ve TEKNOFEST'te derece alan araçların ortak düzenini izler:
  * açık karbon fiber şasi, merkezi akrilik basınç tüpü, 4 dikey + 4 vektörel (45°) itici, iki batarya tüpü,
  * DVL, stereo ön kamera, alt kamera, hidrofon dizisi, torpido lançeri, işaret bırakıcı ve tutucu kol.
@@ -126,7 +126,7 @@
     g.font = '700 70px Unbounded, "Arial Black", sans-serif'; g.textBaseline = 'middle';
     g.fillText('DENİZ6', 150, 64);
     g.font = '600 22px "JetBrains Mono", Consolas, monospace';
-    g.fillText('D6-AUV · REV 0.3', 154, 112);
+    g.fillText('D6-ROV · REV 0.3', 154, 112);
   }
 
   /* ---------- the vehicle ---------- */
@@ -178,7 +178,7 @@
     decalTex.colorSpace = THREE.SRGBColorSpace; decalTex.anisotropy = opt.anisotropy || 4;
     M.decal = keep(new THREE.MeshStandardMaterial({ map: decalTex, transparent: true, roughness: 0.6, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
 
-    var root = new THREE.Group(); root.name = 'D6-AUV';
+    var root = new THREE.Group(); root.name = 'D6-ROV';
     var parts = {}, order = [];
     function part(name, ex, delay) {
       var g = new THREE.Group(); g.name = name; root.add(g);

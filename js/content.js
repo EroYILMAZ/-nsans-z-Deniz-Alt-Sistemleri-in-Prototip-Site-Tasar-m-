@@ -20,7 +20,7 @@ window.DENIZ6_CONTENT = {
     { label: 'GitHub', href: '' }
   ],
 
-  // Takım. name boşsa kart "Ad Soyad" yer tutucusunu gösterir.
+  // Takım. name boşsa kart üyenin rolünü gösterir.
   // photo: 'img/team/dosya.jpg' (kare, en az 256 px). Boşsa adın baş harfleri görünür.
   // email ve profile (LinkedIn vb.) isteğe bağlı; boşsa o ikon çıkmaz.
   // tone: 'biolume' (turkuaz), 'signal' (turuncu) veya boş (nötr) rozet rengi.
@@ -48,5 +48,5 @@ window.DENIZ6_CONTENT = {
   },
 
   // Sponsorlar: yalnızca ad ('Firma') ya da logo ile ({ name: 'Firma', logo: 'img/sponsors/firma.svg' }).
-  sponsors: ['Sponsor logonuz', 'Kurum adı', 'Destekçi firma', 'Üniversite', 'Mühendislik ortağı', 'Yerel işletme']
+  sponsors: []
 };

@@ -1,0 +1,77 @@
+/* Deniz6 — açılıştaki dalış filmi (js/dive-hero.js). site.css'teki .lay düzenini (açılış kartı, kabarcıklar, gölge) kullanır;
+   arka plandaki katmanlı görsellerin yerini kaydırmayla oynayan film alır. */
+
+.dive { height: calc(100vh + 4 * 112vh); height: calc(100svh + 4 * 112vh); }
+.dive .lay-stage { background: #041321; }
+
+/* film: dört parça üst üste; yalnızca bulunulan parça görünür (data-on). Video hazır olana kadar parçanın ilk karesi görünür. */
+.dive-media { position: absolute; inset: 0; z-index: 0; animation: dive-in 1.8s var(--dz-ease-out, ease-out) both; }
+@keyframes dive-in { from { opacity: 0; transform: scale(1.05); filter: blur(6px); } }
+.dive-layer { position: absolute; inset: 0; margin: 0; visibility: hidden; }
+.dive-layer[data-on] { visibility: visible; }
+.dive-layer picture, .dive-layer img, .dive-layer video { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; }
+.dive-layer video { opacity: 0; }
+.dive-layer[data-ready] video { opacity: 1; }
+
+/* bölüm yazıları: sağda, sayfa sütunuyla hizalı. Görünürlük ve kayma js/dive-hero.js'ten gelir. */
+.dive-chapters {
+  position: absolute; inset: 0; z-index: 3;
+  display: grid; align-items: center; justify-items: end;
+  padding: 0 var(--left);
+  pointer-events: none;
+}
+.dive-ch {
+  grid-area: 1 / 1;
+  position: relative;
+  width: min(420px, 40vw);
+  opacity: 0; visibility: hidden;
+  will-change: opacity, transform;
+  pointer-events: auto;
+}
+.dive-ch::before {
+  position: absolute; z-index: -1; inset: -56px -72px; content: ''; pointer-events: none;
+  background: radial-gradient(ellipse at center, #041321d9 0%, #04132199 50%, #04132100 74%);
+}
+.dive-ch-kick { margin: 0 0 12px; font: 600 11px/1.4 var(--font-mono); letter-spacing: .14em; color: var(--acc); }
+.dive-ch h2 { margin: 0; font: 800 clamp(30px, 3.6vw, 52px)/1.02 var(--font-display); letter-spacing: -.03em; color: var(--ink); text-wrap: balance; text-shadow: 0 6px 30px #0208104d; }
+.dive-ch p:not(.dive-ch-kick) { margin: 16px 0 0; font: 500 16px/1.6 var(--font-body); color: #d2e8ee; max-width: 38ch; }
+.dive-ch-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+
+.dive-cta {
+  display: inline-flex; align-items: center; min-height: 46px; padding: 0 22px; border-radius: 999px;
+  background: var(--acc); color: #03201d; font: 700 15px/1 var(--font-body); text-decoration: none;
+  transition: box-shadow .32s var(--dz-ease-out, ease-out), transform .32s var(--dz-ease-out, ease-out);
+}
+.dive-cta:hover { box-shadow: 0 0 0 1px #34e7d466, 0 8px 32px -4px #34e7d499; transform: translateY(-3px); }
+.dive-link {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 20px; border-radius: 999px;
+  border: 1px solid #e7fbff66; color: var(--ink); font: 700 15px/1 var(--font-body); text-decoration: none;
+  transition: border-color .16s;
+}
+.dive-link span { transition: transform .32s var(--dz-ease-out, ease-out); }
+.dive-link:hover { border-color: var(--acc); }
+.dive-link:hover span { transform: translateX(5px); }
+.dive-cta:focus-visible, .dive-link:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* dalış ilerlemesi: sahnenin altında ince bir çizgi */
+.dive-meter { position: absolute; z-index: 4; left: 0; right: 0; bottom: 0; height: 2px; background: #e7fbff1a; pointer-events: none; }
+.dive-meter span { display: block; height: 100%; background: var(--acc); box-shadow: 0 0 12px var(--acc); transform: scaleX(var(--dive, 0)); transform-origin: 0 50%; }
+
+@media (max-width: 860px) {
+  .dive-chapters { justify-items: start; align-items: center; padding: 0 20px; }
+  .dive-ch { width: min(420px, calc(100vw - 40px)); }
+  .dive-ch::before { inset: -40px -24px; }
+  .dive-ch h2 { font-size: 32px; }
+  .dive .lay-idx { opacity: calc(1 - var(--p) * 1.2); }
+}
+
+/* "hareketi azalt": film oynamaz, her parçanın ilk karesi bölüm bölüm değişir. */
+@media (prefers-reduced-motion: reduce) {
+  .dive { height: calc(100vh + 4 * 112vh); height: calc(100svh + 4 * 112vh); }
+  .dive .lay-stage { position: sticky; }
+  .dive-media { animation: none; }
+}
+@media print {
+  .dive { height: auto; }
+  .dive-chapters, .dive-meter { display: none; }
+}

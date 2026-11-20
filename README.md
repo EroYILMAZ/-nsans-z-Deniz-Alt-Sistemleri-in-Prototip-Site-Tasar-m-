@@ -17,6 +17,9 @@ js/content.js         Değiştirilecek içerik: takım, e-posta, sosyal medya, s
 js/site.js            Sayfanın bölümleri ve metinleri
 js/auv/               D6-AUV modeli ve 3B sahneler
 js/fx.js              Site geneli hareketli efektler
+js/dive-hero.js       Açılıştaki kaydırmayla oynayan dalış filmi
+js/smooth-scroll.js   Fare tekerleğiyle yumuşak, süzülerek duran kaydırma
+css/dive.css          Dalış filminin stilleri
 js/film-player.js     Tanıtım filmi oynatıcısı (ortam ışığı, bölüm önizlemeleri)
 js/cine/              Sinematik bölümler: core (ortak kaydırma ve yardımcılar), window (sinema penceresi), kareler (görev anları + ışık kutusu), ascent (yüzeye çıkış)
 css/cine/             Bu bölümlerin stilleri, film greni ve vizör çerçeveleri
@@ -33,7 +36,11 @@ Yazı tipleri (Unbounded, Manrope, JetBrains Mono) Google Fonts'tan yüklenir; i
 
 Sitedeki araç, RoboSub ve TEKNOFEST'te derece alan otonom su altı araçlarının ortak mimarisine göre kodla modellenmiş temsilî bir AUV'dir: karbon fiber yan plakalı açık şasi, çift O-ring flanşlı akrilik basınç tüpü, 4 dikey + 4 adet 45° vektörel T200 sınıfı itici, iki batarya tüpü, DVL, stereo ön kamera, alt kamera, hidrofon dizisi, torpido lançeri, işaret bırakıcı ve tutucu kol.
 
-- **Giriş bölümü:** Aracın kendini çizen teknik çizimi (yalnızca SVG + CSS): çizgiler sırayla çizilir, sonar tarama çizgisi geçer, iticiler döner, DVL ışınları ve fener yanıp söner. WebGL kullanmaz.
+- **Giriş bölümü (dalış filmi):** Sayfa kaydıkça oynayan, tek ve kesintisiz bir dalış çekimi: araç su yüzeyinin hemen altından karanlık derinliğe iner ve sonunda fenerleri yanık şekilde ekranı doldurur. Film Higgsfield ile üretildi ve kare kare dört parçaya bölündü (parçalar ardışık karelerden kesildiği için aralarında dikiş yoktur). Açılış kartı ilk parçada çerçevesinden ayrılır; başlık sol üste, bölüm listesi sol alta yerleşir. Sonraki parçalarda sağda kısa bölüm yazıları (İniş, Araç, Hedef) belirir. Kaydırma bittiğinde film birden durmaz, yavaşça yavaşlayarak durur. Masaüstünde fare tekerleği de sayfayı süzerek kaydırır (`js/smooth-scroll.js`). Hareketi azaltma tercihinde film oynamaz, her bölümde o parçanın ilk karesi görünür.
+  - Kod: `js/dive-hero.js` (film kontrolü), `css/dive.css` (görünüm), `js/site.js` içindeki `Hero` ve `DIVE_CHAPTERS` (yazılar).
+  - Yumuşaklık ayarları: `js/dive-hero.js` içindeki `SMOOTH_MS` (filmin kaydırmaya yetişme süresi) ve `js/smooth-scroll.js` içindeki `GLIDE_MS` (sayfanın süzülme süresi). Değer büyüdükçe duruş daha uzun sürer.
+  - Videolar herkese açık bir CDN'den yüklenir. Klasöre indirmek için `tools/dalis-indir.bat` dosyasını çift tıklayıp çalıştırın, ardından `js/dive-hero.js` içinde `LOCAL = true` yapın; site `media/dalis/` klasöründeki kopyaları kullanır.
+  - Eski katmanlı giriş görselleri (`img/katman/`) artık kullanılmıyor; isterseniz silebilirsiniz.
 - **Araç bölümü (kaydırmalı 3B deneyim):** Bölüm ekrana yapışır; arka planda ortam yoktur, yalnızca araç vardır. Ziyaretçi kaydırdıkça 7 sahne oynar: yaklaşma, gövde, itki (pervaneler hızlanır), parçalarına ayrılma, algılama (DVL ışınları), görev (torpido atışı, tutucu kol) ve son duruş. Sağ üstte telemetri, altta tıklanabilir bölüm çubuğu vardır.
 - Performans: tek bir WebGL tuvali vardır ve yalnızca bölüm ekrandayken çizer. Post-processing, gölge haritası ve saydamlık (transmission) geçişi yoktur; modelin sabit parçaları birleştirilmiştir (≈130 çizim çağrısı). Kare hızı düşerse çözünürlük kendiliğinden azalır.
 
@@ -41,9 +48,9 @@ Dosyalar:
 
 - `js/auv/auv-model.js` — aracın modeli ve dokuları. Parça adları, patlatma yönleri ve etiket noktaları buradadır.
 - `js/auv/auv-scene.js` — sahne, kamera rotası (`CAM`), bölüm metinleri (`CHAPTERS`) ve etiketler (`LABELS`).
-- `js/site.js` — giriş bölümündeki teknik çizim (`BLUEPRINT`).
-- `css/auv.css` — deneyimin, etiketlerin ve site geneli efektlerin stilleri.
-- `js/fx.js` — dalış açılışı, kaydırma ilerleme çizgisi, tıklamada sonar halkası, mıknatıslı butonlar, eğilen kartlar, harf çözme efekti ve kinetik yazı bandı.
+- `js/site.js`, `js/dive-hero.js` ve `css/dive.css` — giriş bölümündeki dalış filmi.
+- `css/auv.css` — 3B deneyimin, etiketlerin ve site geneli efektlerin stilleri.
+- `js/fx.js` — kaydırma ilerleme çizgisi, mıknatıslı butonlar, eğilen kartlar ve bölüm etiketlerindeki hareket.
 
 Notlar:
 
@@ -53,10 +60,13 @@ Notlar:
 
 ## Tanıtım filmi
 
-"Tanıtım filmi" bölümündeki 30 saniyelik film, araba reklamı tarzında aracın yeteneklerini gösterir: karanlıkta fenerlerin yanması, tabanda süzülme, iticilerin yakın çekimi, yana kayma ve yerinde 360° dönüş, renkli kapıdan geçiş (görüntü işleme kutusuyla), ağır çekim torpido atışı ve yüzeye doğru yükseliş.
+"Tanıtım filmi" bölümündeki 30 saniyelik film, araba reklamı tarzında aracın yeteneklerini gösterir: karanlıkta fenerlerin yanması, havuz tabanında süzülme, iticinin yakın çekimi, yana kayma ve yerinde dönüş, şeritli kapıdan geçiş, ağır çekim torpido atışı ve yüzeye doğru yükseliş.
 
-- Film önceden render edilmiş bir MP4'tür; sitede canlı 3B çizilmez, tarayıcının donanım video çözücüsüyle oynar. Bölüme yaklaşınca dosya yüklenir, ekranın yarısı görününce sessiz oynar, çıkınca durur. Ziyaretçi durdurursa kendiliğinden başlamaz. Dar ekranlarda 720p sürümü kullanılır.
+- Film, takımın aracının referans görseli (DENİZ6 yazılı turuncu yüzerlik blokları, karbon yan plakalar, akrilik tüp) kullanılarak Higgsfield (Seedance 2.5) ile gerçekçi bir su altı çekimi olarak üretildi. 720p ve dar ekranlar için 540p sürümü vardır; kapak karesi, ortam ışığı şeridi (`d6-rov-ambient.webp`, 6 kare/sn × 30 sn) ve bölüm önizlemeleri (`d6-rov-chapters.webp`, 7 kare) aynı filmden üretildi.
+- Dosyalar herkese açık bir CDN'den yüklenir. Klasöre indirmek için `tools/dalis-indir.bat` dosyasını çalıştırın ve `js/site.js` içinde `FILM_LOCAL = true` yapın; site `media/film/` klasörünü kullanır.
+- Film bölüme yaklaşınca yüklenir, ekranın yarısı görününce sessiz oynar, çıkınca durur. Ziyaretçi durdurursa kendiliğinden başlamaz.
 - Alt çubuktaki noktalar filmin bölümlerine atlar (`js/site.js` içindeki `FILM.chapters`).
+- Eski, kodla çizilmiş film (`media/d6-auv-film-*.mp4`) klasörde duruyor. Aşağıdaki adımlar o eski filmi yeniden üretmek içindir.
 
 Filmi yeniden üretmek (ör. takımın gerçek modeli gelince) için:
 

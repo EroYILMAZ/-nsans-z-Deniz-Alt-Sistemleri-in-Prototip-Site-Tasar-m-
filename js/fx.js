@@ -1,54 +1,19 @@
 /*
  * Deniz6 — site geneli hareketli efektler. React'tan bağımsız çalışır; DOM hazır olduktan sonra elemanları bulur.
- *  - Dalış açılışı: sayfa yüklenirken derinlik sayacı ve sonar.
  *  - Üstte kaydırma ilerleme çizgisi.
- *  - Tıklanan yerde sonar halkası.
  *  - Butonlarda mıknatıs etkisi, kartlarda 3B eğilme.
  *  - Bölüm etiketlerinde "sonar çözme" (harf karıştırma) efekti.
- *  - Kaydırma hızına tepki veren büyük kinetik yazı bandı ([data-fx-band]).
  * Hareket azaltma tercihinde hepsi kapanır ya da sade hâle döner.
  */
 (function () {
   'use strict';
   var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var fine = !!(window.matchMedia && window.matchMedia('(pointer: fine)').matches);
-  var root = document.documentElement;
   function el(tag, cls, parent) { var e = document.createElement(tag); if (cls) e.className = cls; (parent || document.body).appendChild(e); return e; }
-
-  /* ---------- dive intro ---------- */
-  (function intro() {
-    if (reduce || sessionStorageGet('d6-dived')) return;
-    var o = el('div', 'fx-dive'); o.setAttribute('aria-hidden', 'true');
-    var sonar = el('div', 'fx-dive-sonar', o); el('i', null, sonar); el('b', null, sonar);
-    var depth = el('div', 'fx-dive-depth', o); depth.innerHTML = '0.0<small>m</small>';
-    el('div', 'fx-dive-label', o).textContent = 'DENİZ6 · DALIŞA HAZIRLANIYOR';
-    var bar = el('i', null, el('div', 'fx-dive-bar', o));
-    var t0 = performance.now(), loaded = document.readyState === 'complete', done = false;
-    window.addEventListener('load', function () { loaded = true; });
-    function step(now) {
-      if (done) return;
-      var t = (now - t0) / 1000;
-      var k = Math.min(1, t / 1.6), target = loaded ? k : Math.min(k, 0.85);
-      var d = (1 - Math.pow(1 - target, 3)) * 30;
-      depth.firstChild.nodeValue = d.toFixed(1);
-      bar.style.transform = 'scaleX(' + target.toFixed(3) + ')';
-      if ((target >= 1) || t > 4.5) { finish(); return; }
-      requestAnimationFrame(step);
-    }
-    function finish() {
-      done = true; o.classList.add('is-done');
-      sessionStorageSet('d6-dived', '1');
-      setTimeout(function () { if (o.parentNode) o.parentNode.removeChild(o); }, 900);
-    }
-    o.addEventListener('click', finish);
-    requestAnimationFrame(step);
-  })();
-  function sessionStorageGet(k) { try { return window.sessionStorage.getItem(k); } catch (e) { return null; } }
-  function sessionStorageSet(k, v) { try { window.sessionStorage.setItem(k, v); } catch (e) { /* private mode */ } }
 
   /* ---------- scroll progress ---------- */
   var prog = el('div', 'fx-progress'); prog.setAttribute('aria-hidden', 'true');
-  var lastY = window.pageYOffset, vel = 0, ticking = false;
+  var ticking = false;
   // back to top, with the same progress drawn as a ring
   var top = el('button', 'fx-top'); top.type = 'button'; top.setAttribute('aria-label', 'Sayfanın başına dön');
   top.innerHTML = '<svg viewBox="0 0 48 48" aria-hidden="true"><circle class="fx-top-bg" cx="24" cy="24" r="21"/><circle class="fx-top-ring" cx="24" cy="24" r="21" pathLength="1"/><path d="M24 31V17M17.5 23.5L24 17l6.5 6.5"/></svg>';
@@ -124,16 +89,25 @@
 
   if (reduce) return;
 
-  /* ---------- sonar ping where the visitor clicks ---------- */
-  window.addEventListener('pointerdown', function (e) {
-    if (e.button !== 0) return;
-    if (e.target && e.target.closest && e.target.closest('input, textarea, .auvx-canvas')) return;
-    [0, 1].forEach(function (i) {
-      var p = el('span', 'fx-ping' + (i ? ' is-2' : '')); p.setAttribute('aria-hidden', 'true');
-      p.style.left = e.clientX + 'px'; p.style.top = e.clientY + 'px';
-      setTimeout(function () { if (p.parentNode) p.parentNode.removeChild(p); }, 1200);
+  /* ---------- easter egg: type "deniz6" and the vehicle swims across the bottom of the screen ---------- */
+  (function () {
+    var word = 'deniz6', buf = '', busy = false;
+    window.addEventListener('keydown', function (e) {
+      var t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      if (!e.key || e.key.length !== 1) return;
+      buf = (buf + e.key.toLocaleLowerCase('tr-TR')).slice(-word.length);
+      if (buf !== word || busy) return;
+      busy = true; buf = '';
+      var s = el('div', 'fx-swim'); s.setAttribute('aria-hidden', 'true');
+      s.innerHTML = '<svg viewBox="0 0 120 50" width="120" height="50"><path d="M108 25 L128 12 L128 38 Z" fill="#fff1d6" opacity=".25"/>' +
+        '<rect x="14" y="10" width="86" height="30" rx="5" fill="none" stroke="#34e7d4" stroke-width="2"/><rect x="18" y="4" width="78" height="7" rx="3" fill="#ff8a2a"/>' +
+        '<rect x="30" y="18" width="52" height="14" rx="7" fill="none" stroke="#9fe8f2" stroke-width="1.5"/><ellipse cx="9" cy="32" rx="4" ry="7" fill="#15181c" stroke="#34e7d4"/>' +
+        '<ellipse cx="105" cy="32" rx="4" ry="7" fill="#15181c" stroke="#34e7d4"/><circle cx="102" cy="22" r="2.2" fill="#fff1d6"/></svg>' +
+        '<span class="fx-swim-tag">D6-ROV · MERHABA</span>';
+      for (var i = 0; i < 9; i++) { var bb = el('i', null, s); bb.style.animationDelay = (i * 0.45).toFixed(2) + 's'; }
+      setTimeout(function () { if (s.parentNode) s.parentNode.removeChild(s); busy = false; }, 7200);
     });
-  }, { passive: true });
+  })();
 
   /* ---------- magnetic buttons, tilting cards ---------- */
   if (fine) {
@@ -189,44 +163,17 @@
     });
   }
 
-  /* ---------- kinetic type band ---------- */
-  var bands = [];
-  function collectBands() {
-    bands = Array.prototype.slice.call(document.querySelectorAll('[data-fx-band] .fx-band-row'));
-  }
-  var off = 0, bandRaf = 0;
-  function bandStep() {
-    bandRaf = 0;
-    var y = window.pageYOffset, d = y - lastY; lastY = y;
-    vel += (d - vel) * 0.12;
-    off += 0.35 + Math.abs(vel) * 0.35;
-    bands.forEach(function (row, i) {
-      var w = row.scrollWidth / 2 || 1, x = ((off * (i % 2 ? -1 : 1) + i * w * 0.37) % w + w) % w;
-      row.style.transform = 'translate3d(' + (-x).toFixed(1) + 'px,0,0) skewX(' + Math.max(-8, Math.min(8, -vel * 0.25)).toFixed(2) + 'deg)';
-    });
-    if (bands.length && bandsVisible) bandRaf = requestAnimationFrame(bandStep);
-  }
-  var bandsVisible = false;
-  var bio = typeof IntersectionObserver === 'function' ? new IntersectionObserver(function (es) {
-    bandsVisible = es.some(function (e) { return e.isIntersecting; });
-    if (bandsVisible && !bandRaf) { lastY = window.pageYOffset; bandRaf = requestAnimationFrame(bandStep); }
-  }) : null;
-
-  function init() {
-    watch(); collectBands();
-    if (bio) document.querySelectorAll('[data-fx-band]').forEach(function (b) { bio.observe(b); });
-  }
   // React renders asynchronously; look again shortly after start and whenever the DOM grows.
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(init, 60); });
-  else setTimeout(init, 60);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { setTimeout(watch, 60); });
+  else setTimeout(watch, 60);
   if (typeof MutationObserver === 'function') {
     var mt = 0;
     // live widgets (telemetry, film timer, eyebrow decoding) change text constantly; only real layout changes matter
-    var LIVE = '.auvx, .film, .dz-cd-digits, .fx-band, .dz-stat, .cine-live, .cine-win, .asc, .cine-lb';
+    var LIVE = '.auvx, .film, .dz-cd-digits, .dz-stat, .cine-live, .cine-win, .asc, .cine-lb';
     new MutationObserver(function (list) {
       for (var i = 0; i < list.length; i++) {
         var t = list[i].target, n = t.nodeType === 1 ? t : t.parentElement;
-        if (!n || !n.closest || !n.closest(LIVE)) { clearTimeout(mt); mt = setTimeout(init, 200); return; }
+        if (!n || !n.closest || !n.closest(LIVE)) { clearTimeout(mt); mt = setTimeout(watch, 200); return; }
       }
     }).observe(document.getElementById('root') || document.body, { childList: true, subtree: true });
   }

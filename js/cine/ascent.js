@@ -37,7 +37,7 @@
     surfaceStatic: '0 m · YÜZEY',
     title: 'Yüzeye çıktık.',
     sub: 'Bir sonraki dalışta görüşmek üzere.',
-    media: 'D6-AUV derinlikten yüzeydeki ışığa doğru yükseliyor.'
+    media: 'D6-ROV derinlikten yüzeydeki ışığa doğru yükseliyor.'
   };
 
   /* ---------- helpers ---------- */

@@ -537,7 +537,8 @@
     for (var k = 0; k < SUB; k++) {
       var tk = t + ((k + 0.5) / SUB - 0.5) * dtF * SHUTTER;
       tk = Math.max(shot.a, Math.min(shot.b - 1e-4, tk)); // never blend across a cut
-      var st = shot.f(tk); if (k === mid) st0 = st;
+      var st = shot.f(tk); if (window.__filmShot) st = window.__filmShot(st, tk, sub); // stills hook (e.g. the empty hero plate)
+      if (k === mid) st0 = st;
       apply(tk, st);
       camera.updateMatrixWorld();
       // 1. lit scene (layer 0)

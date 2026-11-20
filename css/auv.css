@@ -1,4 +1,4 @@
-/* Deniz6 — D6-AUV 3B deneyimi (js/auv/), giriş bölümündeki teknik çizim ve site geneli hareketli efektler (js/fx.js).
+/* Deniz6 — D6-AUV 3B deneyimi (js/auv/), site geneli hareketli efektler (js/fx.js).
  * Performans: bu dosyada backdrop-filter, mix-blend-mode ve sürekli yeniden boyanan büyük katmanlar yok;
  * animasyonlar yalnızca transform, opacity ve stroke-dashoffset kullanır. */
 
@@ -101,77 +101,8 @@ html.auvx-in .dz-depth.is-fixed { opacity: 0; transform: translate(24px, -50%); 
   .auvx-body { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 }
 
-/* ---------- hero: self-drawing blueprint ---------- */
-.bp { position: relative; margin: 0; color: var(--biolume); }
-.bp-frame { position: relative; overflow: hidden; border: 1px solid #34e7d433; border-radius: var(--radius-lg); background: linear-gradient(160deg, #0a3348cc, #04182599); box-shadow: inset 0 0 0 1px #ffffff08, 0 40px 80px -40px #000; }
-.bp-frame::before, .bp-frame::after { content: ''; position: absolute; width: 16px; height: 16px; border: 1.5px solid var(--biolume); pointer-events: none; }
-.bp-frame::before { left: 10px; top: 10px; border-right: 0; border-bottom: 0; }
-.bp-frame::after { right: 10px; bottom: 10px; border-left: 0; border-top: 0; }
-.bp-svg { display: block; width: 100%; height: auto; overflow: visible; }
-.bp-grid { stroke: #34e7d414; stroke-width: 1; }
-.bp-body { animation: bp-bob 7s var(--dz-ease-tide) 3s infinite; }
-.bp-l { fill: none; stroke: #9fe8f2; stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: bp-draw 1.6s var(--dz-ease-out) calc(.4s + var(--d, 0s)) forwards; }
-.bp-main { stroke: var(--biolume); stroke-width: 2.2; }
-.bp-acc { stroke: var(--biolume); }
-.bp-hidden { stroke: #9fe8f288; stroke-width: 1.2; }
-.bp-foam { stroke: var(--signal); fill: #ffae4a00; animation: bp-draw 1.6s var(--dz-ease-out) calc(.4s + var(--d, 0s)) forwards, bp-fill-foam 1s ease calc(1.8s + var(--d, 0s)) forwards; }
-.bp-decal { fill: #2a1600; font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: .04em; opacity: 0; animation: bp-in .6s ease 2.6s forwards; }
-.bp-led { fill: #ff6b5f; opacity: 0; animation: bp-in .3s ease 2s forwards, dz-blink 1.4s steps(2) 2.3s infinite; }
-.bp-thr .bp-prop { stroke: var(--biolume); stroke-width: 2; transform-box: fill-box; transform-origin: center; opacity: 0; animation: bp-in .3s ease calc(1.6s + var(--d, 0s)) forwards, bp-spin-v .16s linear 2.4s infinite; }
-.bp-thr .bp-prop-h { animation: bp-in .3s ease calc(1.6s + var(--d, 0s)) forwards, bp-spin-h .16s linear 2.4s infinite; }
-.bp-beam { opacity: 0; animation: bp-in 1s ease 2.4s forwards, bp-beam 3.2s var(--dz-ease-tide) 3.4s infinite; }
-.bp-sonar { fill: none; stroke: var(--biolume); stroke-width: 1.4; stroke-dasharray: 4 8; opacity: 0; animation: bp-in .6s ease 2.2s forwards, bp-flow .9s linear 2.2s infinite; }
-.bp-dim path { fill: none; stroke: #93b4c7; stroke-width: 1; opacity: 0; animation: bp-in .8s ease 1.9s forwards; }
-.bp-arrow { fill: #93b4c7; }
-.bp-dim text, .bp-call text { fill: #c9e6ef; font-family: var(--font-mono); font-size: 10px; letter-spacing: .12em; }
-.bp-dim text { opacity: 0; animation: bp-in .8s ease 2s forwards; }
-.bp-call { opacity: 0; transform: translateY(4px); animation: bp-call .7s var(--dz-ease-out) var(--c, 2s) forwards; }
-.bp-call path { fill: none; stroke: var(--biolume); stroke-width: 1; }
-.bp-call circle { fill: var(--biolume); }
-.bp-call text { fill: var(--ink); font-weight: 600; }
-.bp-scan { animation: bp-scan 5.5s linear 1.2s infinite; transform: translateX(-10px); }
-.bp-cap { display: flex; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-3); color: var(--ink-muted); font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; }
-.bp-cap b { color: var(--biolume); font-weight: 600; }
-@keyframes bp-draw { to { stroke-dashoffset: 0; } }
-@keyframes bp-in { to { opacity: 1; } }
-@keyframes bp-call { to { opacity: 1; transform: none; } }
-@keyframes bp-fill-foam { to { fill: #ff8a2ad9; } }
-@keyframes bp-spin-v { 0% { transform: scaleY(1); } 50% { transform: scaleY(-1); } 100% { transform: scaleY(1); } }
-@keyframes bp-spin-h { 0% { transform: scaleX(1); } 50% { transform: scaleX(-1); } 100% { transform: scaleX(1); } }
-@keyframes bp-beam { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
-@keyframes bp-flow { to { stroke-dashoffset: -24; } }
-@keyframes bp-scan { 0% { transform: translateX(-10px); } 70%, 100% { transform: translateX(660px); } }
-@keyframes bp-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-@media (max-width: 900px) { .bp-cap-r { display: none; } }
-
 /* ---------- site-wide motion (js/fx.js) ---------- */
 .fx-progress { position: fixed; left: 0; top: 0; z-index: 90; width: 100%; height: 2px; pointer-events: none; transform-origin: left; transform: scaleX(0); background: linear-gradient(90deg, var(--biolume), #bdf3ff 60%, var(--signal)); }
-
-.fx-ping { position: fixed; z-index: 95; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; pointer-events: none; border: 1.5px solid var(--biolume); animation: fx-ping .9s var(--dz-ease-out) forwards; }
-.fx-ping.is-2 { animation-delay: .14s; opacity: 0; }
-@keyframes fx-ping { 0% { transform: scale(.4); opacity: .9; } 100% { transform: scale(7); opacity: 0; } }
-
-.fx-dive { position: fixed; inset: 0; z-index: 200; display: grid; place-content: center; justify-items: center; gap: var(--space-6); background: radial-gradient(90% 70% at 50% 0%, #0a4862, #051525 60%, #020c16); color: var(--ink); transition: opacity .8s var(--dz-ease-out), visibility .8s; }
-.fx-dive.is-done { opacity: 0; visibility: hidden; }
-.fx-dive-sonar { position: relative; width: 120px; height: 120px; border-radius: 50%; box-shadow: inset 0 0 0 1px #34e7d455; }
-.fx-dive-sonar::before, .fx-dive-sonar::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 1px solid var(--biolume); animation: fx-sonar 1.8s var(--dz-ease-out) infinite; }
-.fx-dive-sonar::after { animation-delay: .9s; }
-.fx-dive-sonar i { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 300deg, #34e7d488 360deg); animation: dz-spin 1.6s linear infinite; }
-.fx-dive-sonar b { position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px; border-radius: 50%; background: var(--biolume); }
-@keyframes fx-sonar { from { transform: scale(.3); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
-.fx-dive-depth { font-family: var(--font-display); font-size: 44px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.fx-dive-depth small { margin-left: 6px; color: var(--ink-muted); font-size: 18px; }
-.fx-dive-label { color: var(--ink-muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: .2em; }
-.fx-dive-bar { width: 180px; height: 2px; border-radius: 2px; background: #55819b55; overflow: hidden; }
-.fx-dive-bar i { display: block; height: 100%; background: var(--biolume); transform-origin: left; transform: scaleX(0); transition: transform .2s linear; }
-
-.fx-band { position: relative; overflow: hidden; padding: var(--space-8) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--surface-sunken); contain: paint; }
-.fx-band-row { display: flex; width: max-content; gap: var(--space-8); white-space: nowrap; will-change: transform; }
-.fx-band-row + .fx-band-row { margin-top: var(--space-2); }
-.fx-band span { font-family: var(--font-display); font-size: clamp(40px, 7vw, 96px); font-weight: 700; line-height: 1; letter-spacing: -.03em; color: var(--surface-sunken); -webkit-text-stroke: 2px var(--line-strong); paint-order: stroke fill; }
-.fx-band span.is-fill { color: var(--ink); -webkit-text-stroke: 0; }
-.fx-band span.is-hl { color: var(--biolume); -webkit-text-stroke: 0; }
-.fx-band em { align-self: center; width: 14px; height: 14px; border-radius: 50%; background: var(--signal); }
 
 .fx-tilt { transition: transform .5s var(--dz-ease-out); }
 .fx-tilt.is-tilting { transition: transform .08s linear; }
@@ -179,14 +110,10 @@ html.auvx-in .dz-depth.is-fixed { opacity: 0; transform: translate(24px, -50%); 
 .depth-bg { background: linear-gradient(180deg, var(--surface) 0%, var(--surface) 30%, color-mix(in srgb, var(--surface-sunken) 80%, var(--surface)) 100%); }
 
 @media (prefers-reduced-motion: reduce) {
-  .fx-ping { display: none; }
   .auvx-panel { transition: opacity .2s; }
-  .auvx-hint i, .bp-body, .bp-scan, .bp-beam, .bp-sonar, .bp-thr .bp-prop, .bp-led { animation: none; }
-  .bp-l, .bp-foam { animation: none; stroke-dashoffset: 0; }
-  .bp-foam { fill: #ff8a2ad9; }
-  .bp-decal, .bp-dim path, .bp-dim text, .bp-call, .bp-thr .bp-prop, .bp-sonar, .bp-beam, .bp-led { opacity: 1; transform: none; animation: none; }
+  .auvx-hint i { animation: none; }
 }
-@media print { .fx-progress, .fx-dive, .auvx-sticky { display: none !important; } .auvx { height: auto; } }
+@media print { .fx-progress, .auvx-sticky { display: none !important; } .auvx { height: auto; } }
 
 /* ---------- performance overrides for design-system pieces ---------- */
 /* a blurred backdrop over moving content is re-filtered every frame; solid fills look the same here */

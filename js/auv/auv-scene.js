@@ -1,5 +1,5 @@
 /*
- * Deniz6 — D6-AUV kaydırmalı 3B deneyimi (Three.js r160).
+ * Deniz6 — D6-ROV kaydırmalı 3B deneyimi (Three.js r160).
  * D6AUV.mountExperience(section): bölüm ekrana yapışır; ziyaretçi kaydırdıkça araç yaklaşır, döner,
  * iticilerini çalıştırır, parçalarına ayrılır, sensörlerini gösterir ve torpido atar.
  * Hafif tutuldu: arka plan CSS'tir (şeffaf tuval), ortam/zemin/parçacık/post-processing/gölge yoktur,
@@ -52,9 +52,9 @@
   }
 
   var CHAPTERS = [
-    { s: 0, e: 0.14, side: 'left', kick: '01 · YAKLAŞMA', title: 'Karanlıktan gelen: D6-AUV.',
-      body: 'Tamamen otonom, sekiz iticili bir su altı aracı. Mimarisi, kendini kanıtlamış otonom su altı araçlarının ortak düzenine dayanıyor: açık şasi, merkezi basınç tüpü, vektörel itki.',
-      specs: [['TİP', 'Otonom (AUV)'], ['BOY', '≈ 0,9 m'], ['HEDEF KÜTLE', '≈ 18 kg']] },
+    { s: 0, e: 0.14, side: 'left', kick: '01 · YAKLAŞMA', title: 'Karanlıktan gelen: D6-ROV.',
+      body: 'Göbek kablosuyla bağlı, sekiz iticili bir su altı aracı. Mimarisi, kendini kanıtlamış su altı robotlarının ortak düzenine dayanıyor: açık şasi, merkezi basınç tüpü, vektörel itki.',
+      specs: [['TİP', 'Uzaktan kumandalı (ROV)'], ['BOY', '≈ 0,9 m'], ['HEDEF KÜTLE', '≈ 18 kg']] },
     { s: 0.14, e: 0.28, side: 'left', kick: '02 · GÖVDE', title: 'Hafif şasi, sızdırmaz kalp.',
       body: 'CNC kesim karbon fiber yan plakalar alüminyum profillerle birleşir. Elektronik, çift O-ring’li flanşlarla kapanan akrilik tüpte; turuncu köpükler aracı nötr yüzerliğe getirir.',
       specs: [['ŞASİ', 'Karbon fiber + Al'], ['TÜP', 'Akrilik Ø200 mm'], ['SIZDIRMAZLIK', 'Çift O-ring']] },
@@ -68,11 +68,11 @@
       body: 'Stereo ön kamera ve alt kamera görüntü işlemeyi besler. DVL dört akustik ışınla tabana göre hızı ölçer; hidrofon dizisi pingerin yönünü varış zamanı farkıyla bulur.',
       specs: [['GÖRÜŞ', 'Stereo + alt kamera'], ['SEYİR', 'DVL + IMU'], ['AKUSTİK', '4 hidrofon']] },
     { s: 0.74, e: 0.88, side: 'left', kick: '06 · GÖREV', title: 'Kapı, kablo, torpido.',
-      body: 'Görev parkuru: renkleri tanıyıp kapıdan geçmek, tabandaki kabloyu izleyip anomalileri işaretlemek ve hedefe torpido fırlatmak. Hepsi insan eli değmeden.',
+      body: 'Görev parkuru: renkleri tanıyıp kapıdan geçmek, tabandaki kabloyu izleyip anomalileri işaretlemek ve hedefe torpido fırlatmak. Pilot, yer istasyonundan canlı görüntüyle yönetir.',
       specs: [['TESPİT', 'Derin öğrenme'], ['TAKİP', 'Kablo + anomali'], ['ATIŞ', '2 × pnömatik']] },
     { s: 0.88, e: 1.0, side: 'right', kick: '07 · DERİNLİĞE', title: 'Yolculuk yeni başlıyor.',
       body: 'Bu model temsilidir; takımın kendi aracı tasarlandıkça burada güncellenecek. Yolculuğa ortak olmak ister misiniz?',
-      specs: [['SINIF', 'Otonom (AUV)'], ['DURUM', 'Tasarım sürüyor']], cta: true }
+      specs: [['SINIF', 'Uzaktan kumandalı (ROV)'], ['DURUM', 'Tasarım sürüyor']], cta: true }
   ];
   var LABELS = [
     { id: 'plate', a: 'plate', t: 'KARBON FİBER ŞASİ', s: 0.16, e: 0.275 },
@@ -343,7 +343,7 @@
 
     var hud = el('div', 'auvx-hud', null, sticky); hud.setAttribute('aria-hidden', 'true');
     var hudHead = el('div', 'auvx-hud-head', null, hud);
-    el('span', 'auvx-hud-dot', null, hudHead); el('span', null, 'D6-AUV · TELEMETRİ', hudHead);
+    el('span', 'auvx-hud-dot', null, hudHead); el('span', null, 'D6-ROV · TELEMETRİ', hudHead);
     var hv = {};
     [['mode', 'MOD'], ['depth', 'DERİNLİK', 'm'], ['speed', 'HIZ', 'm/s'], ['heading', 'YÖN', '°'], ['thrust', 'İTKİ', '%'], ['battery', 'BATARYA', '%']].forEach(function (r) {
       var row = el('div', 'auvx-hud-row', null, hud);
@@ -441,7 +441,7 @@
           setTimeout(function () { section.classList.add('is-ready'); setTimeout(function () { loading.remove(); }, 900); }, 120);
         });
       } catch (err) {
-        if (window.console) console.warn('D6-AUV', err);
+        if (window.console) console.warn('D6-ROV', err);
         section.classList.add('is-static'); loading.remove();
       }
     }
